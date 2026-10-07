@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-design": {
+      "source": "drolu/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "b328303f118fc2607904c7a6808f7342f17dbff017f4f1a66b4be3b91a0d4765"
+    },
+    "product-comparison": {
+      "source": "finsilabs/awesome-ecommerce-skills",
+      "sourceType": "github",
+      "skillPath": "skills/storefront-ui/product-comparison/SKILL.md",
+      "computedHash": "84c74276cbaae658d354a7e978e0a13314e1f75959e641775dd27cb4b5876b93"
+    },
+    "ui-design": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-design/SKILL.md",
+      "computedHash": "49e51b68e7e12af51e38b8f559f88e297dac33a515adce8a3a846da07cf07b45"
+    }
+  }
+}

@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-carbon-ink: #1a211e;
+  --color-paper-white: #ffffff;
+  --color-true-black: #000000;
+  --color-obsidian: #0c0c0c;
+  --color-fog: #eef1f0;
+  --color-mist: #e0e0e0;
+  --color-graphite: #606562;
+  --color-ash-border: #cccfcd;
+  --color-slate: #363537;
+  --color-pewter: #4e4e4e;
+  --color-ember-red: #cc2e39;
+  --color-retail-canvas: #ffffff;
+  --color-retail-ink: #141414;
+  --color-retail-muted: #6b6b6b;
+  --color-retail-line: #e5e5e5;
+  /* Sampled sale-price rgb(169, 34, 34). Fallback #E10600 was not used. */
+  --color-retail-red: #a92222;
+  --color-category-teal: #0f6e6b;
+  --color-category-blue: #1d4e89;
+  --color-category-amber: #c47b12;
+  --color-category-violet: #5c4d8a;
+
+  --color-background: #ffffff;
+  --color-foreground: #1a211e;
+
+  --font-sans: var(--font-ibm-plex-arabic), "IBM Plex Sans Arabic", sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+  --font-display: var(--font-ibm-plex-arabic), "IBM Plex Sans Arabic", sans-serif;
+
+  --text-caption: 14px;
+  --leading-caption: 1;
+  --tracking-caption: 0px;
+  --text-button-label: 16px;
+  --leading-button-label: 1.1;
+  --tracking-button-label: 0.057em;
+  --text-heading-sm: 24px;
+  --leading-heading-sm: 1.2;
+  --tracking-heading-sm: 0.038em;
+  --text-heading: 32px;
+  --leading-heading: 1.2;
+  --text-heading-lg: 48px;
+  --leading-heading-lg: 1.1;
+  --tracking-heading-lg: -0.025em;
+  --text-display: 48px;
+  --leading-display: 1.1;
+  --tracking-display: -0.025em;
+
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-3xl: 32px;
+  --radius-full: 9999px;
+}
+
+:root {
+  --page-max-width: 1440px;
+  --section-gap: 80px;
+  --card-padding: 24px;
+  --element-gap: 24px;
+}
+
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+body {
+  background: var(--color-paper-white);
+  color: var(--color-carbon-ink);
+  font-family: var(--font-sans);
+  overflow-x: clip;
+}
+
+.full-bleed {
+  width: 100vw;
+  margin-inline-start: calc(50% - 50vw);
+}
+
+.ads-track {
+  display: flex;
+  width: max-content;
+  animation: ads-marquee 36s linear infinite;
+}
+
+.ads-bar:hover .ads-track,
+.ads-bar:focus-within .ads-track {
+  animation-play-state: paused;
+}
+
+.product-rail {
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gallery-thumb:focus-visible {
+  outline: 2px solid var(--color-retail-ink);
+  outline-offset: 2px;
+}
+
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .ads-bar {
+    height: 32px;
+    min-height: 32px;
+  }
+
+  .ads-track {
+    animation: none;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    touch-action: pan-x pan-y;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .ads-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ads-track > div {
+    display: contents;
+  }
+
+  .ads-track [data-ads-clone] {
+    display: none;
+  }
+
+  .ads-track > div > span {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+}
+
+@keyframes ads-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
+.product-image-alt {
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.group:hover .product-image-alt,
+.group:focus-within .product-image-alt {
+  opacity: 1;
+}
+
+.quick-add {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .quick-add {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+
+  .group:hover .quick-add,
+  .group:focus-within .quick-add {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-image-alt,
+  .group:hover .product-image-alt,
+  .group:focus-within .product-image-alt {
+    opacity: 0;
+    transition: none;
+  }
+
+  .quick-add {
+    transition: none;
+  }
+
+  .product-rail {
+    scroll-behavior: auto;
+  }
+}
