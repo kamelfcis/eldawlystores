@@ -29,11 +29,11 @@ Arabic-first adaptation of the Peak Design Refero spec in `docs/DESIGN (1).md`. 
 
 `docs/DESIGN (1).md` stays the token source. This file is the Arabic storefront adaptation.
 
-The default is still flat: no shadows, no page gradients, no glass. The admin workspace keeps carbon ink, ember red, and the category colors. Ember red is an admin badge color, not a storefront button or price color. Retail red `#a92222` stays on the current price, the `يوفر` line, the hero CTA, and the خصم badge. The four category colors repeat in this order — teal, blue, amber, violet — by category `sort_order` on filter pills. They are not used on the storefront page background or the homepage canvas. The announcement bar is the only storefront exception: it may use a **controlled hex gradient** from `settings.storefront_branding`, never freeform CSS.
+The default is still flat: no shadows, no page gradients, no glass. The admin workspace keeps carbon ink, ember red, and the category colors. Ember red is an admin badge color, not a storefront button or price color. Retail red `#a92222` stays on the current price, the `يوفر` line, the hero CTA, and the خصم badge. The four category colors repeat in this order — teal, blue, amber, violet — by category `sort_order` on filter pills. They are not used on the storefront page background or the homepage canvas. The announcement bar is the only storefront exception: it may use a **controlled hex gradient** from `settings.storefront_branding`, never freeform CSS. The homepage mosaic slider may use a **local bottom scrim** on the photo (`obsidian` to transparent) so overlay titles stay readable. That scrim is not a page gradient.
 
 ## Depth override
 
-The flat no-shadow rule is lifted only for admin dashboard metric tiles and chart cards, category circles, product cards, and the discount badge. Every other surface stays flat, including the page, the announcement bar, the obsidian hero, editors, and the latest-orders and low-stock lists.
+The flat no-shadow rule is lifted only for admin dashboard metric tiles and chart cards, category circles, product cards, and the discount badge. Every other surface stays flat, including the page, the announcement bar, the homepage mosaic, editors, and the latest-orders and low-stock lists.
 
 Allowed shadow: `0 8px 24px rgb(26 33 30 / 0.06)`. No page gradients except the announcement bar’s admin hex tokens. No glass.
 
@@ -67,7 +67,7 @@ CSS-only. No Framer Motion.
 | `--motion-large` | `480ms` | Hero content/image entrance |
 | `--motion-ease` | `cubic-bezier(0.22, 1, 0.36, 1)` | All storefront transitions |
 
-`prefers-reduced-motion: reduce` disables hero entrance, card lift/zoom, and rail auto-advance. Product rails are user-driven scroll only.
+`prefers-reduced-motion: reduce` disables hero overlay entrance, card lift/zoom, and slider autoplay (slides jump with no transform). Product rails are user-driven scroll only.
 
 ## Surfaces
 
@@ -85,8 +85,8 @@ White canvas, near-black text, gray secondary text, gray borders, and one retail
 Homepage order:
 
 1. Announcement bar: white 14px weight 700, RTL, from active `homepage_banners` where `type = announcement`. Paint comes from `settings.storefront_branding` tokens (`gradientStart` / optional `gradientMid` / `gradientEnd`, `#` + 6 hex digits, `gradientAngle` 0–360). Defaults `#5c1010` → `#a92222` → `#2a0a0a` at 90°. A thin inner highlight overlay is CSS-only, not admin CSS. Desktop and mobile keep the CSS marquee (clone, 36s, hover pause, `touch-action: pan-y`) when `marqueeEnabled` is on. `prefers-reduced-motion` or admin-off switches to a user-controlled `overflow-x` scroller (`touch-action: pan-x pan-y`). Clone links stay `tabIndex=-1`. Region `aria-label="إعلانات"`. An Arabic fallback line shows when no announcement exists. An optional image is 28px. `getBanners` returns database rows as-is when Supabase is configured; mock banners are only used when Supabase is not configured. Copy stays on `/admin/homepage`; colors and logo stay on `/admin/settings` الهوية.
-2. Obsidian split hero: from `lg`, a two-column grid — the first active `type = hero` banner is a ~2/3 `#0c0c0c` panel (min-height about 500px) with a paper-white bold title, fog subtitle, a large 8px cover from that banner’s `image_url` (`object-cover`), and a retail-red button only when `link_url` exists. Remaining hero banners and every `type = offer` banner are bordered paper cards. The photo is about 16:10 and roughly 70% of the card height, with a compact carbon-ink title and graphite subtitle underneath. The sidebar stack is capped at 3 and matches the panel height. Extra cards wrap under the split in a tight 2–3 column row. Below `lg` the panel is full width and cards sit under it. No banners means no hero. No extra slogans.
-3. Category rail: section label `تسوق حسب القسم` in retail ink. 88px raised discs filled edge to edge (`object-cover`, `object-center`) from `categories.image_url`, so the photo fills the circle. Each disc has the allowed depth shadow, a retail-line ring, and a 1px paper inner highlight. Desktop hover lifts `translate-y-[-2px]` with no scale, rotate, or photo overlay. `prefers-reduced-motion` skips the lift. Arabic name, desktop arrows, swipe below `md`, link `/categories/[slug]`. An empty image stays a solid `#f3f3f3` disc. A hairline separates the rail from the hero.
+2. Homepage mosaic: `getBanners` active rows only. `type = announcement` stays the header ticker. Active `type = hero` with `image_url`, `sort_order` ASC, are **slider slides** (skip missing image). Active `type = offer` are **side promo tiles**, capped at 2 on desktop beside the slider and matching its height (`lg` ~2/3 slider + stacked offers, min-height about 500px). Extra offers wrap under the mosaic in a 2–3 column row. Zero hero images: offers-only mosaic, or hide the block — never an empty slider. Mobile: full-width ~16/10 slider, then a 2-column offer row. Overlay shows `title_ar` only when present, and a retail-red CTA only when `link_url` exists. `components/home/hero-slider.tsx` is the client island: serializable slides from the server page, CSS `translate3d` only, no Framer Motion, no carousel package, no client fetch. Autoplay 6s when there is more than one slide; pause on hover, focus, and `prefers-reduced-motion`. Dots and arrows are 44px. Keyboard: ArrowLeft next, ArrowRight previous (RTL). Swipe follows the finger when horizontal intent wins; `touch-action: pan-y` so vertical scroll is not locked. First slide uses `next/image` `preload`. No extra slogans.
+3. Category rail: section label `تسوق حسب القسم` in retail ink. 88px raised discs filled edge to edge (`object-cover`, `object-center`) from `categories.image_url`, so the photo fills the circle. Each disc has the allowed depth shadow, a retail-line ring, and a 1px paper inner highlight. Desktop hover lifts `translate-y-[-2px]` with no scale, rotate, or photo overlay. `prefers-reduced-motion` skips the lift. Arabic name, desktop arrows, swipe below `md`, link `/categories/[slug]`. An empty image stays a solid `#f3f3f3` disc. A hairline separates the rail from the mosaic.
 4. One product rail per category that has active products, 12 products maximum. The title is the category name in retail ink. `عرض الكل` is a retail-ink link to `/categories/[slug]`. A hairline and 40–48px padding (`mt-10 pt-10` / `lg:mt-12 lg:pt-12`) separate the hero, categories, and each rail.
 
 Product cards are shared by rails, `/products`, and category pages. Each card has a retail-line hairline, an 8px radius, and the allowed depth shadow. The name is two lines. The image stays `object-contain`. The price uses `formatMoney` in retail red. When `compare_at` is higher than the price, the card shows one pill `خصم {n}%`, where `n` is `Math.round((1 - price / compareAt) * 100)`, on a retail-red ground with paper-white type, full radius, and the slight badge shadow. The gray struck compare-at and `يوفر {formatMoney(compare − price)}` stay with that badge. No compare-at means no badge and no `يوفر` line. Stock reads `متوفر`, `مخزون منخفض` for 1–5, and `نفذت الكمية` at 0. Quick add sits below the image. The product page price block uses the same price, badge, savings, and stock language.
@@ -97,11 +97,11 @@ The product page stays a server component. `components/product/product-gallery.t
 
 ### Homepage rhythm
 
-Keep the order: announcement marquee, obsidian split hero, category circles, then product rails. Do not restore a white carousel or a red ticker. Section hairlines stay `mt-10 pt-10` / `lg:mt-12 lg:pt-12`. The hero title steps 28 / 40 / 48px at leading 1.10. The category label is 16px bold; rail titles are 24px bold and share a baseline with `عرض الكل`. Category discs are 88px, raised, `object-cover` edge to edge, with a retail-line ring that does not inset the photo. Disc arrows sit on the circle’s vertical center. Rail arrows use the retail line, and the control row sits 12px above the cards.
+Keep the order: announcement marquee, mosaic (slider + offers), category circles, then product rails. Optional `lg+` thin category text strip sits under the header (from `getCategories`, `عرض الكل` → `/categories`); the الأقسام mega menu stays. Do not add a fake mobile bottom tab bar. Section hairlines stay `mt-10 pt-10` / `lg:mt-12 lg:pt-12`. Slider overlay titles step about 22 / 28 / 32px at leading 1.10. The category label is 16px bold; rail titles are 24px bold and share a baseline with `عرض الكل`. Category discs are 88px, raised, `object-cover` edge to edge, with a retail-line ring that does not inset the photo and a retail-red ring on hover. Tighten disc gaps. Disc arrows sit on the circle’s vertical center. Rail arrows use the retail line, and the control row sits 12px above the cards.
 
 ### Header chrome
 
-Mobile row: logo → search icon (Dialog with `GET /products?search=`) → cart drawer → الأقسام sheet. Desktop keeps fog search field with clear control, mega menu, account, wishlist, cart drawer. Cart drawer reuses `useCart`; `/cart` remains the full-page view. Footer uses `max-w-[1440px]`, live categories from `getCategories()`, honest shipping/returns copy, and WhatsApp when configured.
+Mobile row (`lg` and below): cart drawer at **start** (RTL visual right), `StoreLogo` **absolutely centered**, search icon + الأقسام sheet at **end**. Do not add a bottom tab bar. Desktop (`lg+`, including 1440): logo at start, fog search, account, wishlist, cart drawer — do **not** center the logo. Mega menu stays on desktop. Search dialog is `GET /products?search=`. Cart drawer reuses `useCart`; `/cart` remains the full-page view. Footer uses `max-w-[1440px]`, live categories from `getCategories()`, honest shipping/returns copy, and WhatsApp when configured.
 
 ### Header logo
 
@@ -182,7 +182,7 @@ Not built:
 
 ## RTL and responsive
 
-The document is `dir="rtl"`. Chart plots are `dir="ltr"` so the 14 days read oldest to newest, left to right, with Arabic day labels. Trend charts stack in one column below `lg` and sit side by side from `lg`. The status chart is full width. Category and product rails scroll horizontally on touch; arrows show from `md`. Homepage content stays inside the 1440px frame with 16px page padding. The announcement marquee is full width. Below `lg` the hero panel is full width and offer cards sit under it.
+The document is `dir="rtl"`. Chart plots are `dir="ltr"` so the 14 days read oldest to newest, left to right, with Arabic day labels. Trend charts stack in one column below `lg` and sit side by side from `lg`. The status chart is full width. Category and product rails scroll horizontally on touch; arrows show from `md`. Homepage content stays inside the 1440px frame with 16px page padding. The announcement marquee is full width. Below `lg` the slider is full width (~16/10) and offer tiles sit in two columns under it.
 
 Upload sizes shown on the admin image fields:
 
@@ -191,8 +191,8 @@ Upload sizes shown on the admin image fields:
 | Category | 512×512 (1:1) | 88px circle, `object-cover` |
 | Brand logo | 400×400 PNG | Logo field |
 | Store wordmark | ~360×96 SVG/PNG | Header `StoreLogo`, uploaded via `/api/upload` `folder=brands` |
-| Hero cover | 1600×1000 (16:10) | First active hero `image_url`, large cover on the obsidian panel |
-| Offer | 1200×800 (3:2) | About 16:10, roughly 70% of the card |
+| Hero slide | 1600×1000 (16:10) | Each active hero `image_url` in the mosaic slider |
+| Offer tile | 1200×800 (16:10) | Side promo beside the slider (two on desktop); extras wrap under the mosaic |
 | Announcement icon | 112×112, optional | 28px in the announcement bar |
 | Product photo | 1200×1200 (1:1) | Square card, `object-contain` |
 

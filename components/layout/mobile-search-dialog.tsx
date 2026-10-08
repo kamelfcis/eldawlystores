@@ -20,7 +20,7 @@ export function MobileSearchDialog() {
     <>
       <button
         type="button"
-        className="p-2 text-carbon-ink hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink sm:hidden"
+        className="p-2 text-carbon-ink hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink lg:hidden"
         aria-label="بحث"
         onClick={() => setOpen(true)}
       >
@@ -28,7 +28,7 @@ export function MobileSearchDialog() {
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          className="fixed inset-x-0 top-0 max-w-none translate-x-0 translate-y-0 rounded-none border-0 border-b border-mist p-4 sm:hidden"
+          className="fixed inset-x-0 top-0 max-w-none translate-x-0 translate-y-0 rounded-none border-0 border-b border-mist p-4 lg:hidden"
           aria-describedby={undefined}
         >
           <DialogHeader className="sr-only">

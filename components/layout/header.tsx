@@ -22,22 +22,35 @@ export function Header({
 }) {
   return (
     <header className="border-b border-mist bg-paper-white">
-      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 sm:gap-6">
-        <div className="order-1 shrink-0">
+      <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 sm:gap-6">
+        <div className="relative z-10 shrink-0 lg:hidden">
+          <CartDrawerTrigger />
+        </div>
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-0 flex h-16 items-center justify-center lg:hidden">
+          <div className="pointer-events-auto max-w-[min(180px,42vw)]">
+            <StoreLogo logoUrl={logoUrl} align="center" />
+          </div>
+        </div>
+
+        <div className="hidden shrink-0 lg:block">
           <StoreLogo logoUrl={logoUrl} />
         </div>
 
-        <div className="order-3 lg:order-2">
-          <CategoryMegaMenu categories={categories} />
+        <div className="hidden lg:block">
+          <CategoryMegaMenu categories={categories} placement="desktop" />
         </div>
 
-        <div className="order-4 hidden min-w-0 flex-1 sm:order-3 sm:block">
+        <div className="hidden min-w-0 flex-1 lg:block">
           <DesktopSearchForm />
         </div>
 
-        <div className="order-2 ms-auto flex items-center gap-1 lg:order-4 lg:ms-0">
+        <div className="relative z-10 ms-auto flex items-center gap-0.5 lg:ms-0">
           <MobileSearchDialog />
-          <div className="hidden items-center gap-1 sm:flex">
+          <div className="lg:hidden">
+            <CategoryMegaMenu categories={categories} placement="mobile" />
+          </div>
+          <div className="hidden items-center gap-1 lg:flex">
             {account ? <AccountMenuButton account={account} /> : (
               <Link href="/account/login" className="p-2 text-carbon-ink hover:opacity-70" aria-label="حسابي">
                 <User className="h-5 w-5" strokeWidth={1.5} />
@@ -46,8 +59,8 @@ export function Header({
             <Link href="/wishlist" className="relative p-2 text-carbon-ink hover:opacity-70" aria-label="المفضلة">
               <Heart className="h-5 w-5" strokeWidth={1.5} />
             </Link>
+            <CartDrawerTrigger />
           </div>
-          <CartDrawerTrigger />
         </div>
       </div>
     </header>

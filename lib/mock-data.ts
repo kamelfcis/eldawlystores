@@ -88,7 +88,9 @@ export const mockBanners = [
   { id: "banner-0b", title_ar: "ضمان أصلي على كل الأجهزة", subtitle_ar: null, image_url: null, link_url: null, sort_order: 1, is_active: true, type: "announcement" as const },
   { id: "banner-0c", title_ar: "تقسيط واستلام فوري من الفروع", subtitle_ar: null, image_url: null, link_url: null, sort_order: 2, is_active: true, type: "announcement" as const },
   { id: "banner-1", title_ar: "عروض الربيع", subtitle_ar: "خصومات حتى 20% على الهواتف", image_url: "/placeholder-banner.svg", link_url: "/categories/smartphones", sort_order: 0, is_active: true, type: "hero" as const },
-  { id: "banner-2", title_ar: "MacBook Air M4", subtitle_ar: "الجديد وصل — اطلب الآن", image_url: "/placeholder-banner.svg", link_url: "/products/macbook-air-m4", sort_order: 1, is_active: true, type: "offer" as const },
+  { id: "banner-1b", title_ar: "أجهزة محمولة", subtitle_ar: null, image_url: "/placeholder-banner.svg", link_url: "/categories/laptops", sort_order: 1, is_active: true, type: "hero" as const },
+  { id: "banner-2", title_ar: "MacBook Air M4", subtitle_ar: "الجديد وصل — اطلب الآن", image_url: "/placeholder-banner.svg", link_url: "/products/macbook-air-m4", sort_order: 0, is_active: true, type: "offer" as const },
+  { id: "banner-3", title_ar: "سماعات", subtitle_ar: "صوت أوضح يومياً", image_url: "/placeholder-banner.svg", link_url: "/products", sort_order: 1, is_active: true, type: "offer" as const },
 ];
 
 export const mockShippingRates = [

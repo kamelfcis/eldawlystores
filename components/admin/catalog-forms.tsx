@@ -364,9 +364,9 @@ export function BannerForm({
   const imageLabel = type === "hero" ? "صورة الغلاف" : type === "announcement" ? "صورة اختيارية" : "رابط الصورة";
   const imageHint =
     type === "hero"
-      ? "المقاس: 1600×1000 (16:10)"
+      ? "المقاس: 1600×1000 (16:10) لشريحة السلايدر"
       : type === "offer"
-        ? "المقاس: 1200×800 (3:2)"
+        ? "المقاس: 1200×800 (16:10) لبلاطة بجانب السلايدر"
         : "المقاس: 112×112 اختياري";
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">

@@ -2,6 +2,7 @@ import { getBanners, getCategories } from "@/lib/catalog";
 import { getAccountMenu } from "@/lib/auth";
 import { getStorefrontBranding } from "@/lib/store-settings";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
+import { CategoryStrip } from "@/components/layout/category-strip";
 import { Header } from "@/components/layout/header";
 
 export async function SiteHeader() {
@@ -25,6 +26,7 @@ export async function SiteHeader() {
           }))}
       />
       <Header categories={categories} account={account} logoUrl={branding.logoUrl} />
+      <CategoryStrip categories={categories} />
     </div>
   );
 }

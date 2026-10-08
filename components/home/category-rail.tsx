@@ -23,7 +23,7 @@ export function CategoryRail({ categories }: { categories: Category[] }) {
     <div className="flex min-w-0 items-start gap-2">
       <div
         ref={scrollerRef}
-        className="scrollbar-hide flex min-w-0 flex-1 snap-x snap-mandatory gap-4 overflow-x-auto pt-2 pb-2"
+        className="scrollbar-hide flex min-w-0 flex-1 snap-x snap-mandatory gap-2.5 overflow-x-auto pt-2 pb-2"
       >
         {categories.map((category) => {
           const image = category.image_url?.trim() || null;

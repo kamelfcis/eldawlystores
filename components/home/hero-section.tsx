@@ -1,56 +1,30 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { HeroSlider, type HeroSlide } from "@/components/home/hero-slider";
 import type { Database } from "@/lib/types/database";
 
 type Banner = Database["public"]["Tables"]["homepage_banners"]["Row"];
 
-const SIDEBAR_CAP = 3;
+const SIDEBAR_CAP = 2;
 
 function bannerHref(banner: Banner) {
   const href = banner.link_url?.trim() ?? "";
   return href.length > 0 ? href : null;
 }
 
-function HeroPanel({ banner }: { banner: Banner }) {
-  const title = banner.title_ar.trim();
-  const subtitle = banner.subtitle_ar?.trim() ?? "";
-  const image = banner.image_url?.trim() || null;
-  const href = bannerHref(banner);
-
-  return (
-    <div className="flex h-full min-h-[280px] min-w-0 flex-col justify-center gap-4 overflow-hidden rounded-[8px] bg-obsidian p-5 sm:min-h-[320px] sm:p-6 lg:min-h-[500px] lg:flex-row lg:items-stretch lg:gap-8 lg:p-8">
-      <div className="hero-panel-enter flex min-w-0 flex-col justify-center gap-3 lg:flex-1 lg:gap-4">
-        {title ? (
-          <h1 className="break-words text-[28px] font-bold leading-[1.1] tracking-[-0.025em] text-paper-white sm:text-[40px] lg:text-[48px]">
-            {title}
-          </h1>
-        ) : null}
-        {subtitle ? <p className="break-words text-[16px] leading-relaxed text-fog">{subtitle}</p> : null}
-        {href ? (
-          <Button variant="retail" asChild>
-            <Link href={href}>تسوق الآن</Link>
-          </Button>
-        ) : null}
-      </div>
-      {image ? (
-        <div className="hero-image-enter relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-[8px] lg:aspect-auto lg:max-w-[48%] lg:flex-1 lg:self-stretch">
-          <Image
-            src={image}
-            alt={title || "غلاف"}
-            fill
-            preload
-            sizes="(max-width: 1024px) 100vw, 720px"
-            className="object-cover object-center"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,rgb(169_34_34/0.12),transparent_60%)]"
-          />
-        </div>
-      ) : null}
-    </div>
-  );
+function toSlides(heroes: Banner[]): HeroSlide[] {
+  const slides: HeroSlide[] = [];
+  for (const banner of heroes) {
+    const imageUrl = banner.image_url?.trim() ?? "";
+    if (!imageUrl) continue;
+    slides.push({
+      id: banner.id,
+      title: banner.title_ar.trim(),
+      imageUrl,
+      href: bannerHref(banner),
+    });
+  }
+  return slides;
 }
 
 function OfferCard({ banner, stretch }: { banner: Banner; stretch?: boolean }) {
@@ -64,7 +38,7 @@ function OfferCard({ banner, stretch }: { banner: Banner; stretch?: boolean }) {
         <div
           className={
             stretch
-              ? "relative aspect-[16/10] w-full overflow-hidden lg:aspect-auto lg:min-h-0 lg:flex-[7]"
+              ? "relative aspect-[16/10] w-full overflow-hidden lg:aspect-auto lg:min-h-0 lg:flex-1"
               : "relative aspect-[16/10] w-full overflow-hidden"
           }
         >
@@ -72,15 +46,15 @@ function OfferCard({ banner, stretch }: { banner: Banner; stretch?: boolean }) {
             src={image}
             alt={title || "عرض"}
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 360px"
             className="object-cover object-center"
           />
         </div>
       ) : null}
       {title || subtitle ? (
-        <div className={stretch ? "min-w-0 space-y-1 px-3 py-2 lg:flex-[3]" : "min-w-0 space-y-1 px-3 py-2"}>
-          {title ? <h2 className="break-words text-[16px] font-bold text-carbon-ink">{title}</h2> : null}
-          {subtitle ? <p className="break-words text-[14px] leading-relaxed text-graphite">{subtitle}</p> : null}
+        <div className="min-w-0 space-y-1 px-3 py-2">
+          {title ? <h2 className="line-clamp-2 break-words text-[16px] font-bold text-carbon-ink">{title}</h2> : null}
+          {subtitle ? <p className="line-clamp-2 break-words text-[14px] leading-relaxed text-graphite">{subtitle}</p> : null}
         </div>
       ) : null}
     </>
@@ -101,40 +75,41 @@ function OfferCard({ banner, stretch }: { banner: Banner; stretch?: boolean }) {
 }
 
 export function HeroSection({ heroes, offers }: { heroes: Banner[]; offers: Banner[] }) {
-  if (heroes.length === 0 && offers.length === 0) return null;
+  const slides = toSlides(heroes);
+  const hasSlider = slides.length > 0;
+  const hasOffers = offers.length > 0;
 
-  const [primary, ...extraHeroes] = heroes;
-  const cards = [...extraHeroes, ...offers];
-  const sidebar = cards.slice(0, SIDEBAR_CAP);
-  const extras = cards.slice(SIDEBAR_CAP);
-  const split = Boolean(primary) && sidebar.length > 0;
+  if (!hasSlider && !hasOffers) return null;
+
+  const sidebar = hasSlider ? offers.slice(0, SIDEBAR_CAP) : [];
+  const extras = hasSlider ? offers.slice(SIDEBAR_CAP) : offers;
+  const mosaic = hasSlider && sidebar.length > 0;
 
   return (
-    <section aria-label={primary ? "الغلاف" : "العروض"} className="min-w-0">
+    <section aria-label={hasSlider ? "الغلاف" : "العروض"} className="min-w-0">
       <div
         className={
-          split
-            ? "grid min-w-0 items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-rows-1 lg:min-h-[500px]"
-            : "min-w-0"
+          mosaic
+            ? "grid min-w-0 items-stretch gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:min-h-[500px]"
+            : hasSlider
+              ? "min-w-0"
+              : "grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-3"
         }
       >
-        {primary ? <HeroPanel banner={primary} /> : null}
+        {hasSlider ? <HeroSlider slides={slides} /> : null}
         {sidebar.length > 0 ? (
-          <div
-            className={
-              split
-                ? "flex h-full min-h-0 min-w-0 flex-col gap-4 sm:max-lg:grid sm:max-lg:grid-cols-2 lg:min-h-[500px]"
-                : "grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            }
-          >
+          <div className="grid min-w-0 grid-cols-2 gap-3 lg:flex lg:h-full lg:min-h-[500px] lg:flex-col">
             {sidebar.map((banner) => (
-              <OfferCard key={banner.id} banner={banner} stretch={split} />
+              <OfferCard key={banner.id} banner={banner} stretch={mosaic} />
             ))}
           </div>
         ) : null}
+        {!hasSlider
+          ? extras.map((banner) => <OfferCard key={banner.id} banner={banner} />)
+          : null}
       </div>
-      {extras.length > 0 ? (
-        <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {hasSlider && extras.length > 0 ? (
+        <div className="mt-3 grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-3">
           {extras.map((banner) => (
             <OfferCard key={banner.id} banner={banner} />
           ))}

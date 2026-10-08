@@ -36,7 +36,13 @@ function CategoryGrid({ categories, onNavigate }: { categories: Category[]; onNa
   );
 }
 
-export function CategoryMegaMenu({ categories }: { categories: Category[] }) {
+export function CategoryMegaMenu({
+  categories,
+  placement,
+}: {
+  categories: Category[];
+  placement?: "desktop" | "mobile";
+}) {
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [desktopOpen, setDesktopOpen] = useState(false);
@@ -64,8 +70,12 @@ export function CategoryMegaMenu({ categories }: { categories: Category[] }) {
 
   if (categories.length === 0) return null;
 
+  const showDesktop = placement !== "mobile";
+  const showMobile = placement !== "desktop";
+
   return (
     <>
+      {showDesktop ? (
       <div ref={rootRef} className="relative hidden lg:block">
         <button
           type="button"
@@ -98,7 +108,9 @@ export function CategoryMegaMenu({ categories }: { categories: Category[] }) {
           </div>
         ) : null}
       </div>
+      ) : null}
 
+      {showMobile ? (
       <div className="lg:hidden">
         <button
           type="button"
@@ -126,6 +138,7 @@ export function CategoryMegaMenu({ categories }: { categories: Category[] }) {
           </DialogContent>
         </Dialog>
       </div>
+      ) : null}
     </>
   );
 }

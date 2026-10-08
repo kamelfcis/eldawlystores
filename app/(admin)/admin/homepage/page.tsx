@@ -8,7 +8,7 @@ import type { BannerType } from "@/lib/types/database";
 export const metadata = { title: "إدارة الصفحة الرئيسية" };
 
 const SECTIONS: Array<{ type: BannerType; title: string; addLabel: string }> = [
-  { type: "hero", title: "غلاف الصفحة", addLabel: "غلاف جديد" },
+  { type: "hero", title: "سلايدر الغلاف", addLabel: "شريحة جديدة" },
   { type: "announcement", title: "شريط الإعلانات", addLabel: "رسالة جديدة" },
   { type: "offer", title: "بطاقات العروض", addLabel: "عرض جديد" },
 ];
@@ -32,7 +32,7 @@ export default async function AdminHomepagePage({
   return (
     <AdminPage title="الصفحة الرئيسية">
       <p className="text-[14px] text-graphite">
-        شريط الإعلانات بحبر كربوني. أول غلاف نشط هو الغلاف الكبير، وصورته هي الصورة الكبيرة في الصفحة الرئيسية.
+        شريط الإعلانات يبقى شريط التمرير أعلى الصفحة. كل غلاف نشط له صورة يدخل السلايدر حسب الترتيب (بدون صورة يُتخطى). بطاقات العروض: اثنتان بجانب السلايدر على سطح المكتب بنفس الارتفاع، والباقي أسفل الفسيفساء. بدون صور غلاف تظهر العروض وحدها ولا يُعرض سلايدر فارغ.
       </p>
       <AdminError message={error} />
       {params.edit ? (
