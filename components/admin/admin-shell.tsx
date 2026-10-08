@@ -35,7 +35,7 @@ export function AdminShell({ name, children }: AdminShellProps) {
   }, [open]);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-fog text-carbon-ink">
+    <div data-admin-shell className="min-h-screen overflow-x-hidden bg-fog text-carbon-ink">
       <div className="flex min-h-screen">
         <aside className="sticky top-0 hidden h-screen w-[240px] shrink-0 flex-col border-l border-mist bg-paper-white md:flex">
           <Link href="/admin" className="px-5 py-5 text-[16px] font-bold tracking-[0.057em] text-carbon-ink">

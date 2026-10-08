@@ -14,6 +14,7 @@ interface ProductFiltersProps {
   currentMin?: string;
   currentMax?: string;
   currentAvailability?: string;
+  layout?: "bar" | "sidebar";
 }
 
 function FilterFields({
@@ -123,6 +124,7 @@ export function ProductFilters({
   currentMin,
   currentMax,
   currentAvailability,
+  layout = "bar",
 }: ProductFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -143,13 +145,13 @@ export function ProductFilters({
 
   return (
     <>
-      <div className="sticky top-16 z-30 -mx-4 border-b border-mist bg-retail-canvas/95 px-4 py-3 backdrop-blur-sm md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
-        <div className="flex items-center gap-2 md:hidden">
+      <div className={layout === "sidebar" ? "sticky top-16 z-30 -mx-4 border-b border-mist bg-retail-canvas/95 px-4 py-3 backdrop-blur-sm lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none" : "sticky top-16 z-30 -mx-4 border-b border-mist bg-retail-canvas/95 px-4 py-3 backdrop-blur-sm md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none"}>
+        <div className={layout === "sidebar" ? "flex items-center gap-2 lg:hidden" : "flex items-center gap-2 md:hidden"}>
           <select
             value={currentSort ?? ""}
             onChange={(e) => updateParams({ sort: e.target.value })}
             className="h-9 min-w-0 flex-1 rounded-[4px] border border-ash-border bg-paper-white px-3 text-sm"
-            aria-label="الترتيب"
+            aria-label="ترتيب حسب"
           >
             <option value="">الترتيب</option>
             <option value="price_asc">السعر: الأقل</option>
@@ -172,7 +174,8 @@ export function ProductFilters({
           </button>
         </div>
 
-        <div className="hidden flex-wrap items-center gap-3 md:flex">
+        <div className={layout === "sidebar" ? "hidden lg:flex lg:flex-col lg:gap-3" : "hidden flex-wrap items-center gap-3 md:flex"}>
+          {layout === "sidebar" ? <p className="text-[14px] font-bold text-retail-ink">ترتيب حسب</p> : null}
           <FilterFields
             brands={brands}
             currentSort={currentSort}

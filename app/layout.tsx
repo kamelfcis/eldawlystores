@@ -4,7 +4,10 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { WishlistProvider } from "@/components/wishlist/wishlist-provider";
 import { CompareProvider } from "@/components/compare/compare-provider";
+import { ThemeSync } from "@/components/layout/theme-sync";
 import "./globals.css";
+
+const themeBoot = `(function(){try{if(location.pathname.indexOf("/admin")===0){document.documentElement.classList.remove("dark");return;}var t=localStorage.getItem("doly-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.classList.toggle("dark",t==="dark");}catch(e){}})();`;
 
 const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   variable: "--font-ibm-plex-arabic",
@@ -43,8 +46,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" className={`${ibmPlexArabic.variable} ${ibmPlexMono.variable} h-full`}>
+    <html lang="ar" dir="rtl" className={`${ibmPlexArabic.variable} ${ibmPlexMono.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
+      </head>
       <body className="min-h-full flex flex-col antialiased">
+        <ThemeSync />
         <QueryProvider>
           <CartProvider>
             <WishlistProvider>

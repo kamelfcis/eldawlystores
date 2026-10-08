@@ -3,9 +3,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronLeft, Menu, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { Category } from "@/lib/types/database";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import type { Brand, Category } from "@/lib/types/database";
 
 function CategoryGrid({ categories, onNavigate }: { categories: Category[]; onNavigate?: () => void }) {
   return (
@@ -38,15 +39,18 @@ function CategoryGrid({ categories, onNavigate }: { categories: Category[]; onNa
 
 export function CategoryMegaMenu({
   categories,
+  brandsByCategory,
   placement,
 }: {
   categories: Category[];
+  brandsByCategory: Record<string, Brand[]>;
   placement?: "desktop" | "mobile";
 }) {
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [desktopOpen, setDesktopOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -114,31 +118,125 @@ export function CategoryMegaMenu({
       <div className="lg:hidden">
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-[16px] font-bold tracking-[0.057em] text-slate hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
+          className="inline-flex size-11 items-center justify-center text-carbon-ink hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
           aria-haspopup="dialog"
           aria-expanded={mobileOpen}
-          onClick={() => setMobileOpen(true)}
+          aria-label={mobileOpen ? "إغلاق الأقسام" : "الأقسام"}
+          onClick={() => {
+            if (mobileOpen) {
+              setMobileOpen(false);
+              setActiveCategoryId(null);
+            } else {
+              setMobileOpen(true);
+            }
+          }}
         >
-          الأقسام
-          <ChevronDown className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+          {mobileOpen ? <X className="h-5 w-5" strokeWidth={1.5} /> : <Menu className="h-5 w-5" strokeWidth={1.5} />}
         </button>
-        <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
-          <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>الأقسام</DialogTitle>
-            </DialogHeader>
-            <CategoryGrid categories={categories} onNavigate={() => setMobileOpen(false)} />
-            <Link
-              href="/categories"
-              className="mt-4 inline-block text-[14px] font-bold tracking-[0.038em] text-carbon-ink hover:opacity-80"
-              onClick={() => setMobileOpen(false)}
-            >
-              عرض كل الأقسام
-            </Link>
-          </DialogContent>
-        </Dialog>
+        <MobileCategoryDrawer
+          open={mobileOpen}
+          categories={categories}
+          brandsByCategory={brandsByCategory}
+          activeCategoryId={activeCategoryId}
+          onOpenChange={(next) => {
+            setMobileOpen(next);
+            if (!next) setActiveCategoryId(null);
+          }}
+          onSelectCategory={setActiveCategoryId}
+          onBack={() => setActiveCategoryId(null)}
+        />
       </div>
       ) : null}
     </>
+  );
+}
+
+function MobileCategoryDrawer({
+  open,
+  categories,
+  brandsByCategory,
+  activeCategoryId,
+  onOpenChange,
+  onSelectCategory,
+  onBack,
+}: {
+  open: boolean;
+  categories: Category[];
+  brandsByCategory: Record<string, Brand[]>;
+  activeCategoryId: string | null;
+  onOpenChange: (open: boolean) => void;
+  onSelectCategory: (id: string) => void;
+  onBack: () => void;
+}) {
+  const active = categories.find((category) => category.id === activeCategoryId) ?? null;
+  const brands = active ? brandsByCategory[active.id] ?? [] : [];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="inset-0 top-0 left-0 h-dvh max-h-none w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 p-0">
+        <DialogHeader className="flex-row items-center justify-between border-b border-mist px-4 py-4">
+          <DialogTitle>{active ? active.name_ar : "الأقسام"}</DialogTitle>
+          <ThemeToggle />
+        </DialogHeader>
+        {active ? (
+          <div className="px-2 py-2">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex h-11 w-full items-center gap-2 px-2 text-[14px] font-bold text-carbon-ink"
+            >
+              رجوع
+            </button>
+            <Link
+              href={`/categories/${active.slug}`}
+              onClick={() => onOpenChange(false)}
+              className="flex h-12 items-center px-3 text-[16px] font-bold text-carbon-ink"
+            >
+              كل منتجات القسم
+            </Link>
+            {brands.map((brand) => (
+              <Link
+                key={brand.id}
+                href={`/categories/${active.slug}?brand=${brand.slug}`}
+                onClick={() => onOpenChange(false)}
+                className="flex h-12 items-center gap-3 px-3 text-[16px] text-retail-ink"
+              >
+                {brand.logo_url ? (
+                  <Image src={brand.logo_url} alt="" width={28} height={28} className="size-7 rounded-full object-contain" />
+                ) : null}
+                {brand.name}
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="px-2 py-2">
+            {categories.map((category) => {
+              const image = category.image_url?.trim() || null;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => onSelectCategory(category.id)}
+                  className="flex h-14 w-full items-center gap-3 px-2 text-start"
+                >
+                  <span className="relative size-10 shrink-0 overflow-hidden rounded-full bg-fog">
+                    {image ? <Image src={image} alt="" fill sizes="40px" className="object-cover" /> : null}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[16px] text-retail-ink">{category.name_ar}</span>
+                  <ChevronLeft className="h-4 w-4 shrink-0 text-graphite" aria-hidden />
+                </button>
+              );
+            })}
+            <Link
+              href="/categories"
+              onClick={() => onOpenChange(false)}
+              className="mt-2 flex h-12 items-center px-3 text-[14px] font-bold text-carbon-ink"
+            >
+              كل الأقسام
+            </Link>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

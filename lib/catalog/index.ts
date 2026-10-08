@@ -180,6 +180,40 @@ export const getCategories = cache(async function getCategories(): Promise<Categ
   return isCatalogSuccess(result) ? result.data : [];
 });
 
+export const getCategoryBrandMap = cache(async function getCategoryBrandMap(): Promise<Record<string, Brand[]>> {
+  if (!isSupabaseConfigured()) {
+    const map: Record<string, Brand[]> = {};
+    for (const product of mockProducts) {
+      if (product.status !== "active" || !product.brand) continue;
+      const list = map[product.category_id] ?? [];
+      if (!list.some((brand) => brand.id === product.brand!.id)) list.push(product.brand);
+      map[product.category_id] = list;
+    }
+    return map;
+  }
+
+  const [productRows, brands] = await Promise.all([
+    catalogClient().from("products").select("category_id, brand_id").eq("status", "active"),
+    getBrands(),
+  ]);
+  if (productRows.error) return {};
+
+  const byId = new Map(brands.map((brand) => [brand.id, brand]));
+  const map: Record<string, Brand[]> = {};
+  for (const row of productRows.data ?? []) {
+    if (!row.brand_id) continue;
+    const brand = byId.get(row.brand_id);
+    if (!brand) continue;
+    const list = map[row.category_id] ?? [];
+    if (!list.some((item) => item.id === brand.id)) list.push(brand);
+    map[row.category_id] = list;
+  }
+  for (const list of Object.values(map)) {
+    list.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  }
+  return map;
+});
+
 export const getBrands = cache(async function getBrands(): Promise<Brand[]> {
   if (!isSupabaseConfigured()) return mockBrands;
 

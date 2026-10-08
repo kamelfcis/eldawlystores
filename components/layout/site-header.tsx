@@ -1,4 +1,4 @@
-import { getBanners, getCategories } from "@/lib/catalog";
+import { getBanners, getCategories, getCategoryBrandMap } from "@/lib/catalog";
 import { getAccountMenu } from "@/lib/auth";
 import { getStorefrontBranding } from "@/lib/store-settings";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
@@ -6,9 +6,10 @@ import { CategoryStrip } from "@/components/layout/category-strip";
 import { Header } from "@/components/layout/header";
 
 export async function SiteHeader() {
-  const [banners, categories, account, branding] = await Promise.all([
+  const [banners, categories, brandsByCategory, account, branding] = await Promise.all([
     getBanners(),
     getCategories(),
+    getCategoryBrandMap(),
     getAccountMenu(),
     getStorefrontBranding(),
   ]);
@@ -25,7 +26,7 @@ export async function SiteHeader() {
             imageUrl: banner.image_url,
           }))}
       />
-      <Header categories={categories} account={account} logoUrl={branding.logoUrl} />
+      <Header categories={categories} brandsByCategory={brandsByCategory} account={account} logoUrl={branding.logoUrl} />
       <CategoryStrip categories={categories} />
     </div>
   );

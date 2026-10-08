@@ -5,26 +5,30 @@ import Link from "next/link";
 import { User, Heart } from "lucide-react";
 import { logout } from "@/lib/auth/actions";
 import type { AccountMenu } from "@/lib/auth";
-import type { Category } from "@/lib/types/database";
+import type { Brand, Category } from "@/lib/types/database";
 import { CategoryMegaMenu } from "@/components/layout/category-mega-menu";
 import { StoreLogo } from "@/components/layout/store-logo";
 import { CartDrawerTrigger } from "@/components/cart/cart-drawer";
 import { DesktopSearchForm, MobileSearchDialog } from "@/components/layout/mobile-search-dialog";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function Header({
   categories,
+  brandsByCategory,
   account,
   logoUrl,
 }: {
   categories: Category[];
+  brandsByCategory: Record<string, Brand[]>;
   account: AccountMenu | null;
   logoUrl: string;
 }) {
   return (
     <header className="border-b border-mist bg-paper-white">
       <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 sm:gap-6">
-        <div className="relative z-10 shrink-0 lg:hidden">
-          <CartDrawerTrigger />
+        <div className="relative z-10 flex shrink-0 items-center lg:hidden">
+          <MobileSearchDialog />
+          <CategoryMegaMenu categories={categories} brandsByCategory={brandsByCategory} placement="mobile" />
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-0 flex h-16 items-center justify-center lg:hidden">
@@ -38,7 +42,7 @@ export function Header({
         </div>
 
         <div className="hidden lg:block">
-          <CategoryMegaMenu categories={categories} placement="desktop" />
+          <CategoryMegaMenu categories={categories} brandsByCategory={brandsByCategory} placement="desktop" />
         </div>
 
         <div className="hidden min-w-0 flex-1 lg:block">
@@ -46,11 +50,11 @@ export function Header({
         </div>
 
         <div className="relative z-10 ms-auto flex items-center gap-0.5 lg:ms-0">
-          <MobileSearchDialog />
           <div className="lg:hidden">
-            <CategoryMegaMenu categories={categories} placement="mobile" />
+            <CartDrawerTrigger />
           </div>
           <div className="hidden items-center gap-1 lg:flex">
+            <ThemeToggle />
             {account ? <AccountMenuButton account={account} /> : (
               <Link href="/account/login" className="p-2 text-carbon-ink hover:opacity-70" aria-label="حسابي">
                 <User className="h-5 w-5" strokeWidth={1.5} />

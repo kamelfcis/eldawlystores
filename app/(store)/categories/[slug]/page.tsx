@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCategoryBySlug, getProducts, getCategories, getBrands } from "@/lib/catalog";
+import { getCategoryBySlug, getProducts, getCategories, getCategoryBrandMap } from "@/lib/catalog";
 import { poundsToPiasters } from "@/lib/money";
 import { ProductGrid } from "@/components/product/product-grid";
 import { CategoryPills } from "@/components/layout/category-pills";
@@ -33,11 +33,14 @@ function poundsParamToPiasters(value?: string): number | undefined {
   return poundsToPiasters(pounds);
 }
 
-export async function generateMetadata({ params }: CategoryPageProps) {
+export async function generateMetadata({ params, searchParams }: CategoryPageProps) {
   const { slug } = await params;
+  const sp = await searchParams;
   const category = await getCategoryBySlug(slug);
   if (!category) return { title: "فئة غير موجودة" };
-  return { title: category.name_ar };
+  const brands = (await getCategoryBrandMap())[category.id] ?? [];
+  const brand = brands.find((item) => item.slug === sp.brand);
+  return { title: brand ? `${category.name_ar} ${brand.name}` : category.name_ar };
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
@@ -49,10 +52,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const page = Number(sp.page) || 1;
   const sort = parseSort(sp.sort);
 
-  const [result, categories, brands] = await Promise.all([
+  const brandMap = await getCategoryBrandMap();
+  const categoryBrands = brandMap[category.id] ?? [];
+  const activeBrand = categoryBrands.find((item) => item.slug === sp.brand) ?? null;
+  const title = activeBrand ? `${category.name_ar} ${activeBrand.name}` : category.name_ar;
+
+  const [result, categories] = await Promise.all([
     getProducts({
       categorySlug: slug,
-      brandSlug: sp.brand,
+      brandSlug: activeBrand?.slug,
       sort,
       page,
       minPrice: poundsParamToPiasters(sp.min),
@@ -60,13 +68,12 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       availability: sp.availability === "in_stock" ? "in_stock" : undefined,
     }),
     getCategories(),
-    getBrands(),
   ]);
 
   function pageHref(pageNum: number) {
     const query = new URLSearchParams();
     if (sp.sort) query.set("sort", sp.sort);
-    if (sp.brand) query.set("brand", sp.brand);
+    if (activeBrand) query.set("brand", activeBrand.slug);
     if (sp.min) query.set("min", sp.min);
     if (sp.max) query.set("max", sp.max);
     if (sp.availability) query.set("availability", sp.availability);
@@ -79,29 +86,38 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       <Breadcrumb
         items={[
           { label: "الرئيسية", href: "/" },
-          { label: category.name_ar },
+          { label: category.name_ar, href: activeBrand ? `/categories/${slug}` : undefined },
+          ...(activeBrand ? [{ label: activeBrand.name }] : []),
         ]}
       />
-      <div>
-        <h1 className="text-2xl font-bold">{category.name_ar}</h1>
-        {category.description_ar ? (
-          <p className="mt-1 text-graphite">{category.description_ar}</p>
-        ) : null}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-retail-ink">{title}</h1>
+          <p className="mt-1 text-[14px] text-retail-muted">{result.total} منتج</p>
+          {category.description_ar && !activeBrand ? (
+            <p className="mt-1 text-graphite">{category.description_ar}</p>
+          ) : null}
+        </div>
       </div>
       <CategoryPills categories={categories} activeSlug={slug} />
-      <ProductFilters
-        brands={brands}
-        basePath={`/categories/${slug}`}
-        currentSort={sp.sort}
-        currentBrand={sp.brand}
-        currentMin={sp.min}
-        currentMax={sp.max}
-        currentAvailability={sp.availability}
-      />
+      <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-8">
+        <ProductFilters
+          brands={categoryBrands}
+          basePath={`/categories/${slug}`}
+          layout="sidebar"
+          currentSort={sp.sort}
+          currentBrand={activeBrand?.slug}
+          currentMin={sp.min}
+          currentMax={sp.max}
+          currentAvailability={sp.availability}
+        />
+        <div className="min-w-0">
       {result.products.length === 0 ? (
         <div className="py-16 text-center text-graphite">
-          <p className="text-[16px]">لا توجد منتجات في هذا القسم</p>
-          <p className="mt-2 text-[14px]">جرب تغيير الفلاتر أو تصفح أقساماً أخرى</p>
+          <p className="text-[16px]">لا توجد منتجات</p>
+          <a href={`/categories/${slug}`} className="mt-3 inline-block text-[14px] font-bold text-retail-ink">
+            مسح الفلاتر
+          </a>
         </div>
       ) : (
         <ProductGrid products={result.products} />
@@ -121,6 +137,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           ))}
         </div>
       ) : null}
+        </div>
+      </div>
     </div>
   );
 }

@@ -101,7 +101,7 @@ Keep the order: announcement marquee, mosaic (slider + offers), category circles
 
 ### Header chrome
 
-Mobile row (`lg` and below): cart drawer at **start** (RTL visual right), `StoreLogo` **absolutely centered**, search icon + الأقسام sheet at **end**. Do not add a bottom tab bar. Desktop (`lg+`, including 1440): logo at start, fog search, account, wishlist, cart drawer — do **not** center the logo. Mega menu stays on desktop. Search dialog is `GET /products?search=`. Cart drawer reuses `useCart`; `/cart` remains the full-page view. Footer uses `max-w-[1440px]`, live categories from `getCategories()`, honest shipping/returns copy, and WhatsApp when configured.
+Mobile (`lg` and below): hamburger and search on the visual right, `StoreLogo` absolutely centered, cart on the visual left. The hamburger opens a full-height drawer of categories, then brands that have an active product in that category (`getCategoryBrandMap` from `products.category_id` + `brand_id`), linking to `/categories/[slug]?brand=`. Desktop (`lg+`): logo at the start, fog search, الأقسام panel, account, wishlist, cart — do not center the logo. Storefront dark mode sets `dark` on `html` from `localStorage` `doly-theme`, or `prefers-color-scheme` when unset. `/admin` removes `dark` and keeps the carbon workspace. Search is `GET /products?search=`. Cart drawer reuses `useCart`; `/cart` remains the full page. Footer uses `max-w-[1440px]`, live categories from `getCategories()`, honest shipping/returns copy, and WhatsApp when configured.
 
 ### Header logo
 

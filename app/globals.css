@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme inline {
+@theme {
   --color-carbon-ink: #1a211e;
   --color-paper-white: #ffffff;
   --color-true-black: #000000;
@@ -52,6 +52,23 @@
   --radius-lg: 8px;
   --radius-3xl: 32px;
   --radius-full: 9999px;
+}
+
+html.dark:not(:has([data-admin-shell])) {
+  --color-paper-white: #111214;
+  --color-retail-canvas: #0b0b0c;
+  --color-background: #0b0b0c;
+  --color-retail-ink: #f4f4f2;
+  --color-carbon-ink: #f4f4f2;
+  --color-foreground: #f4f4f2;
+  --color-fog: #1c1e1d;
+  --color-mist: #2c312e;
+  --color-retail-line: #2c312e;
+  --color-retail-muted: #b4b8b6;
+  --color-graphite: #b4b8b6;
+  --color-ash-border: #3a403c;
+  --color-slate: #e6e6e4;
+  color-scheme: dark;
 }
 
 :root {
