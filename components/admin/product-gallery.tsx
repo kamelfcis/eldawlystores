@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import { UploadProgress } from "@/components/loading/upload-progress";
+import { useDeferredBusy } from "@/components/loading/use-deferred-busy";
+import { uploadAdminFile } from "@/lib/loading/upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -28,21 +31,14 @@ export function galleryFromImages(images: Array<{ id: string; url: string; sort_
   }));
 }
 
-async function uploadImage(file: File, folder: "products" | "banners" | "brands"): Promise<{ error: string } | { url: string }> {
-  const body = new FormData();
-  body.append("file", file);
-  body.append("folder", folder);
-  const response = await fetch("/api/upload", { method: "POST", body });
-  const data = (await response.json().catch(() => ({}))) as { status?: string; publicUrl?: string; error?: string };
-  if (data.status === "not-configured" || response.status === 503) return { error: "رفع الصور غير مُعد" };
-  if (!response.ok || data.status !== "uploaded" || !data.publicUrl) return { error: data.error || "فشل رفع الملف" };
-  return { url: data.publicUrl };
-}
-
 export function ProductGalleryField({ initial, r2Enabled }: { initial: GalleryDraft[]; r2Enabled: boolean }) {
   const [rows, setRows] = useState(initial);
   const [message, setMessage] = useState("");
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(0);
+  const [total, setTotal] = useState(0);
+  const uploadId = useId();
+  const showUpload = useDeferredBusy(uploadingKey != null);
 
   function update(key: string, patch: Partial<GalleryDraft>) {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
@@ -62,18 +58,25 @@ export function ProductGalleryField({ initial, r2Enabled }: { initial: GalleryDr
   }
 
   async function onFile(key: string, file: File | undefined) {
-    if (!file) return;
+    if (!file || uploadingKey) return;
     setMessage("");
+    setLoaded(0);
+    setTotal(0);
     setUploadingKey(key);
     try {
-      const result = await uploadImage(file, "products");
-      if ("error" in result) {
+      const result = await uploadAdminFile(file, "products", uploadId, (nextLoaded, nextTotal) => {
+        setLoaded(nextLoaded);
+        setTotal(nextTotal);
+      });
+      if (!result.ok) {
         setMessage(result.error);
         return;
       }
-      update(key, { url: result.url });
+      update(key, { url: result.publicUrl });
     } finally {
       setUploadingKey(null);
+      setLoaded(0);
+      setTotal(0);
     }
   }
 
@@ -82,6 +85,7 @@ export function ProductGalleryField({ initial, r2Enabled }: { initial: GalleryDr
       <p className="text-[14px] text-graphite">الصورة الأساسية تظهر أولاً في المتجر. الترتيب يُحفظ كما هو لباقي الصور ثم تُقدَّم الأساسية.</p>
       {!r2Enabled ? <p className="text-[14px] text-carbon-ink">رفع الصور غير مُعد</p> : null}
       {message ? <p className="text-[14px] text-carbon-ink">{message}</p> : null}
+      <UploadProgress active={uploadingKey != null} loaded={loaded} total={total} />
       <input type="hidden" name="images_json" value={JSON.stringify(rows)} />
       <ul className="space-y-3">
         {rows.map((row) => (
@@ -91,8 +95,13 @@ export function ProductGalleryField({ initial, r2Enabled }: { initial: GalleryDr
             </div>
             <div className="grid gap-2">
               {r2Enabled ? (
-                <label className={uploadingKey === row.key ? `${browseClass} pointer-events-none opacity-50` : browseClass}>
-                  {uploadingKey === row.key ? "جارٍ الرفع…" : "اختيار صورة"}
+                <label className={uploadingKey === row.key ? `${browseClass} pointer-events-none opacity-50` : browseClass} aria-busy={uploadingKey === row.key}>
+                  <span className="grid">
+                    <span className={showUpload && uploadingKey === row.key ? "invisible col-start-1 row-start-1" : "col-start-1 row-start-1"}>اختيار صورة</span>
+                    <span className={showUpload && uploadingKey === row.key ? "col-start-1 row-start-1" : "invisible col-start-1 row-start-1"} role="status">
+                      جارٍ الرفع
+                    </span>
+                  </span>
                   <input
                     type="file"
                     accept="image/*"

@@ -41,8 +41,15 @@ export function AddToCartButton({ product, variant }: AddToCartButtonProps) {
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
       }}
-    >
-      {added ? "تمت الإضافة ✓" : "أضف إلى السلة"}
-    </Button>
+      >
+        <span className="grid">
+          <span className="col-start-1 row-start-1" aria-hidden={added}>
+            أضف إلى السلة
+          </span>
+          <span className="col-start-1 row-start-1" role="status" aria-hidden={!added} style={{ visibility: added ? "visible" : "hidden" }}>
+            تمت الإضافة ✓
+          </span>
+        </span>
+      </Button>
   );
 }

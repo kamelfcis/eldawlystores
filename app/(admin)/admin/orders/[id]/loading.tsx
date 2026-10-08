@@ -1,1 +1,1 @@
-export { default } from "../../loading";
+export { AdminListSkeleton as default } from "@/components/loading/skeletons";

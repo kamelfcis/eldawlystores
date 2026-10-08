@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import { UploadProgress } from "@/components/loading/upload-progress";
+import { useDeferredBusy } from "@/components/loading/use-deferred-busy";
+import { uploadAdminFile } from "@/lib/loading/upload";
 import { Input } from "@/components/ui/input";
 
 const browseClass =
@@ -28,61 +31,61 @@ export function ImageUrlField({
   onUrlChange?: (url: string) => void;
 }) {
   const [url, setUrl] = useState(defaultValue);
+  const [message, setMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [loaded, setLoaded] = useState(0);
+  const [total, setTotal] = useState(0);
+  const uploadId = useId();
+  const showUpload = useDeferredBusy(uploading);
 
   function updateUrl(next: string) {
     setUrl(next);
     onUrlChange?.(next);
   }
-  const [message, setMessage] = useState("");
-  const [uploading, setUploading] = useState(false);
 
   async function onFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file) return;
+    if (!file || uploading) return;
     setMessage("");
+    setLoaded(0);
+    setTotal(0);
     setUploading(true);
 
-    const body = new FormData();
-    body.append("file", file);
-    body.append("folder", folder);
-
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body,
+      const result = await uploadAdminFile(file, folder, uploadId, (nextLoaded, nextTotal) => {
+        setLoaded(nextLoaded);
+        setTotal(nextTotal);
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        status?: string;
-        publicUrl?: string;
-        error?: string;
-      };
-
-      if (data.status === "not-configured" || res.status === 503) {
-        setMessage("رفع الصور غير مُعد");
+      if (!result.ok) {
+        setMessage(result.error);
         return;
       }
-      if (!res.ok || data.status !== "uploaded" || !data.publicUrl) {
-        setMessage(data.error || "فشل رفع الملف");
-        return;
-      }
-      updateUrl(data.publicUrl);
+      updateUrl(result.publicUrl);
     } finally {
       setUploading(false);
+      setLoaded(0);
+      setTotal(0);
     }
   }
 
   return (
     <div className="space-y-2">
       {r2Enabled ? (
-        <label className={uploading ? `${browseClass} pointer-events-none opacity-50` : browseClass}>
-          {uploading ? "جارٍ الرفع…" : "اختيار صورة"}
+        <label className={uploading ? `${browseClass} pointer-events-none opacity-50` : browseClass} aria-busy={uploading}>
+          <span className="grid">
+            <span className={showUpload ? "invisible col-start-1 row-start-1" : "col-start-1 row-start-1"}>اختيار صورة</span>
+            <span className={showUpload ? "col-start-1 row-start-1" : "invisible col-start-1 row-start-1"} role="status">
+              جارٍ الرفع
+            </span>
+          </span>
           <input type="file" accept="image/*" disabled={uploading} onChange={onFile} className="sr-only" />
         </label>
       ) : (
         <p className="text-xs text-graphite">رفع الصور غير مُعد</p>
       )}
       {hint ? <p className="text-xs text-graphite">{hint}</p> : null}
+      <UploadProgress active={uploading} loaded={loaded} total={total} />
       {url ? (
         <div className={previewClassName ?? "h-[72px] w-[72px] overflow-hidden rounded-[8px] border border-mist bg-fog"}>
           {/* eslint-disable-next-line @next/next/no-img-element */}

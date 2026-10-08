@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useWishlist } from "@/components/wishlist/wishlist-provider";
 import { ProductGrid } from "@/components/product/product-grid";
@@ -12,29 +12,37 @@ export function WishlistView() {
   const { ids } = useWishlist();
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const shown = useRef(false);
 
   useEffect(() => {
     let active = true;
     if (ids.length === 0) {
+      shown.current = false;
       setProducts([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    void loadWishlistProducts(ids).then((result) => {
-      if (!active) return;
-      setProducts(result);
-      setLoading(false);
-    });
+    if (!shown.current) setLoading(true);
+    void loadWishlistProducts(ids)
+      .then((result) => {
+        if (!active) return;
+        setProducts(result);
+        shown.current = true;
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoading(false);
+      });
 
     return () => {
       active = false;
     };
   }, [ids]);
 
-  if (loading) {
-    return <p className="py-16 text-center text-[16px] text-graphite">جاري التحميل…</p>;
+  if (loading && products.length === 0) {
+    return <p className="py-16 text-center text-[16px] text-graphite" role="status">جاري التحميل…</p>;
   }
 
   if (ids.length === 0 || products.length === 0) {
@@ -50,7 +58,7 @@ export function WishlistView() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={loading}>
       <h1 className="text-2xl font-bold text-retail-ink">المفضلة</h1>
       <ProductGrid products={products} />
     </div>

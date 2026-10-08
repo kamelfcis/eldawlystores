@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart/cart-provider";
 import { formatMoney } from "@/lib/money";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getGovernorates } from "@/lib/promotions";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { CheckoutStepper } from "@/components/checkout/checkout-stepper";
+import { LoadingButton } from "@/components/loading/loading-button";
+import { useDeferredBusy } from "@/components/loading/use-deferred-busy";
+import { ROUTE_OPERATION_ID, startOperation } from "@/lib/loading/operations";
 
 interface CheckoutPrefill {
   customerName: string;
@@ -41,6 +43,7 @@ export default function CheckoutPage() {
   const [ready, setReady] = useState(false);
   const [prefill, setPrefill] = useState<CheckoutPrefill>(EMPTY_PREFILL);
   const [governorates, setGovernorates] = useState<string[]>(() => (isSupabaseConfigured() ? [] : getGovernorates()));
+  const showPrefillWait = useDeferredBusy(!ready);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +111,7 @@ export default function CheckoutPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
 
@@ -126,23 +130,26 @@ export default function CheckoutPage() {
       items: cart.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
     };
 
+    let confirmed = false;
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string; accessToken?: string };
+      if (!res.ok || typeof data.accessToken !== "string" || data.accessToken.length === 0) {
         setError(data.error ?? "حدث خطأ");
         return;
       }
       clear();
+      startOperation(ROUTE_OPERATION_ID);
       router.push(`/order/${data.accessToken}?confirmed=1`);
+      confirmed = true;
     } catch {
       setError("حدث خطأ في الاتصال");
     } finally {
-      setLoading(false);
+      if (!confirmed) setLoading(false);
     }
   }
 
@@ -152,9 +159,9 @@ export default function CheckoutPage() {
       <CheckoutStepper />
 
       {!ready ? (
-        <p className="text-sm text-graphite">جاري تحميل بياناتك...</p>
+        showPrefillWait ? <p className="text-sm text-graphite" role="status">جاري تحميل بياناتك...</p> : <div className="h-10" aria-hidden="true" />
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8" aria-busy={loading}>
           <fieldset className="space-y-4 rounded-[8px] border border-mist p-4">
             <legend className="px-1 text-[16px] font-bold text-retail-ink">1. بيانات التواصل</legend>
             <Input name="customerName" placeholder="الاسم الكامل" required defaultValue={prefill.customerName} />
@@ -190,9 +197,9 @@ export default function CheckoutPage() {
 
           {error && <p className="text-ember-red text-sm">{error}</p>}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? "جاري تأكيد الطلب..." : "تأكيد الطلب"}
-          </Button>
+          <LoadingButton type="submit" size="lg" className="w-full" pending={loading} pendingLabel="جارٍ تأكيد الطلب">
+            تأكيد الطلب
+          </LoadingButton>
         </form>
       )}
     </div>

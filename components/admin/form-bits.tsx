@@ -1,6 +1,10 @@
 "use client";
 
+import { useEffect, useId } from "react";
 import { useFormStatus } from "react-dom";
+import { finishOperation, startOperation } from "@/lib/loading/operations";
+import { useDeferredBusy } from "@/components/loading/use-deferred-busy";
+import { cn } from "@/lib/utils/cn";
 import type { FormState } from "@/lib/admin/actions";
 
 export const selectClass =
@@ -34,6 +38,16 @@ export function ConfirmButton({
   variant?: "ember" | "quiet";
 }) {
   const { pending } = useFormStatus();
+  const showFeedback = useDeferredBusy(pending);
+  const operationId = useId();
+  const pendingLabel = children === "حذف" ? "جارٍ الحذف" : children === "أرشفة" ? "جارٍ الأرشفة" : "جارٍ التنفيذ";
+
+  useEffect(() => {
+    if (!pending) return;
+    startOperation(operationId);
+    return () => finishOperation(operationId);
+  }, [operationId, pending]);
+
   const className =
     variant === "ember"
       ? "inline-flex h-8 items-center rounded-[4px] border border-ember-red px-3 text-[14px] font-bold tracking-[0.038em] text-ember-red disabled:opacity-50"
@@ -42,12 +56,20 @@ export function ConfirmButton({
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className={className}
       onClick={(event) => {
         if (!window.confirm(message)) event.preventDefault();
       }}
     >
-      {children}
+      <span className="grid">
+        <span className={cn("col-start-1 row-start-1", showFeedback && "invisible")} aria-hidden={showFeedback}>
+          {children}
+        </span>
+        <span className={cn("col-start-1 row-start-1", !showFeedback && "invisible")} role="status" aria-hidden={!showFeedback}>
+          {pendingLabel}
+        </span>
+      </span>
     </button>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { LoadingButton } from "@/components/loading/loading-button";
 import { Input } from "@/components/ui/input";
 import {
   archiveProduct,
@@ -17,6 +19,7 @@ import {
   saveCategory,
   saveProduct,
   savePromotion,
+  type FormState,
 } from "@/lib/admin/actions";
 import { formatMoney } from "@/lib/money";
 import type { BannerType, ProductStatus } from "@/lib/types/database";
@@ -58,7 +61,7 @@ export function ProductForm({
   r2Enabled: boolean;
   view: "cards" | "table";
 }) {
-  const [state, action, pending] = useActionState(saveProduct, initialFormState);
+  const [state, action] = useActionState(saveProduct, initialFormState);
   const queryClient = useQueryClient();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -126,9 +129,9 @@ export function ProductForm({
       <p className="text-[14px] text-graphite sm:col-span-2">السعر يُحفظ بالقرش. 100 قرش = 1 جنيه.</p>
       <ProductGalleryField initial={galleryFromImages(product?.images ?? [])} r2Enabled={r2Enabled} />
       <div className="flex items-center gap-3 sm:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel={product ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {product ? "حفظ التعديل" : "إضافة منتج"}
-        </Button>
+        </LoadingButton>
         <FormNote state={state} />
       </div>
     </form>
@@ -169,7 +172,7 @@ export interface CategoryValues {
 }
 
 export function CategoryForm({ category, r2Enabled }: { category?: CategoryValues; r2Enabled: boolean }) {
-  const [state, action, pending] = useActionState(saveCategory, initialFormState);
+  const [state, action] = useActionState(saveCategory, initialFormState);
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {category ? <input type="hidden" name="id" value={category.id} /> : null}
@@ -198,9 +201,9 @@ export function CategoryForm({ category, r2Enabled }: { category?: CategoryValue
         </Field>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel={category ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {category ? "حفظ الفئة" : "إضافة فئة"}
-        </Button>
+        </LoadingButton>
         <FormNote state={state} />
       </div>
     </form>
@@ -226,7 +229,7 @@ export interface BrandValues {
 }
 
 export function BrandForm({ brand, r2Enabled }: { brand?: BrandValues; r2Enabled: boolean }) {
-  const [state, action, pending] = useActionState(saveBrand, initialFormState);
+  const [state, action] = useActionState(saveBrand, initialFormState);
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {brand ? <input type="hidden" name="id" value={brand.id} /> : null}
@@ -249,9 +252,9 @@ export function BrandForm({ brand, r2Enabled }: { brand?: BrandValues; r2Enabled
         </Field>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel={brand ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {brand ? "حفظ العلامة" : "إضافة علامة"}
-        </Button>
+        </LoadingButton>
         <FormNote state={state} />
       </div>
     </form>
@@ -289,7 +292,7 @@ function toLocalInput(iso: string | null): string {
 }
 
 export function PromotionForm({ promotion }: { promotion?: PromotionValues }) {
-  const [state, action, pending] = useActionState(savePromotion, initialFormState);
+  const [state, action] = useActionState(savePromotion, initialFormState);
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {promotion ? <input type="hidden" name="id" value={promotion.id} /> : null}
@@ -319,9 +322,9 @@ export function PromotionForm({ promotion }: { promotion?: PromotionValues }) {
         نشط
       </label>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel={promotion ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {promotion ? "حفظ العرض" : "إضافة عرض"}
-        </Button>
+        </LoadingButton>
         <FormNote state={state} />
       </div>
     </form>
@@ -337,6 +340,29 @@ export function DeletePromotionForm({ id }: { id: string }) {
       <FormNote state={state} />
     </form>
   );
+}
+
+function savedBannerMessage(type: BannerType) {
+  if (type === "hero") return "تم حفظ الشريحة";
+  if (type === "announcement") return "تم حفظ الرسالة";
+  return "تم حفظ العرض";
+}
+
+function useBannerToast(state: FormState, successMessage: string, closeHash?: string) {
+  const seen = useRef(state);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (seen.current === state) return;
+    seen.current = state;
+    if (state.error) {
+      toast.error(state.error);
+      return;
+    }
+    if (!state.saved) return;
+    toast.success(successMessage);
+    if (closeHash) router.replace(`/admin/homepage#${closeHash}`);
+  }, [closeHash, router, state, successMessage]);
 }
 
 export interface BannerFormValues {
@@ -359,15 +385,16 @@ export function BannerForm({
   r2Enabled: boolean;
   bannerType: BannerType;
 }) {
-  const [state, action, pending] = useActionState(saveBanner, initialFormState);
+  const [state, action] = useActionState(saveBanner, initialFormState);
   const type = banner?.type ?? bannerType;
+  useBannerToast(state, savedBannerMessage(type), type);
   const imageLabel = type === "hero" ? "صورة الغلاف" : type === "announcement" ? "صورة اختيارية" : "رابط الصورة";
   const imageHint =
     type === "hero"
-      ? "المقاس: 1600×1000 (16:10) لشريحة السلايدر"
+      ? "المقاس: 1600×900 لشرائح الوسط"
       : type === "offer"
-        ? "المقاس: 1200×800 (16:10) لبلاطة بجانب السلايدر"
-        : "المقاس: 112×112 اختياري";
+        ? "المقاس: 800×1000 للبطاقة اليسرى والبطاقة اليمنى"
+        : "اختياري. الرسالة تظهر في شريط أعلى الصفحة";
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {banner ? <input type="hidden" name="id" value={banner.id} /> : null}
@@ -401,35 +428,36 @@ export function BannerForm({
         </Field>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel={banner ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {banner ? "حفظ البانر" : "إضافة بانر"}
-        </Button>
-        <FormNote state={state} />
+        </LoadingButton>
+        {state.error ? <p className="text-[14px] text-carbon-ink">{state.error}</p> : null}
       </div>
     </form>
   );
 }
 
 export function MoveBannerForm({ id, direction, disabled }: { id: string; direction: "up" | "down"; disabled?: boolean }) {
-  const [, action, pending] = useActionState(moveBanner, initialFormState);
+  const [state, action] = useActionState(moveBanner, initialFormState);
+  useBannerToast(state, "تم تحديث الترتيب");
   return (
     <form action={action}>
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="direction" value={direction} />
-      <Button type="submit" size="sm" variant="outline" disabled={pending || disabled}>
+      <LoadingButton type="submit" size="sm" variant="outline" disabled={disabled} pendingLabel="جارٍ النقل">
         {direction === "up" ? "أعلى" : "أسفل"}
-      </Button>
+      </LoadingButton>
     </form>
   );
 }
 
 export function DeleteBannerForm({ id }: { id: string }) {
   const [state, action] = useActionState(deleteBanner, initialFormState);
+  useBannerToast(state, "تم الحذف");
   return (
-    <form action={action} className="space-y-1">
+    <form action={action}>
       <input type="hidden" name="id" value={id} />
       <ConfirmButton message="حذف هذا البانر؟ لن تُحذف المنتجات.">حذف</ConfirmButton>
-      <FormNote state={state} />
     </form>
   );
 }

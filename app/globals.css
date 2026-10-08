@@ -336,3 +336,41 @@ body {
     transform: none;
   }
 }
+
+.doly-progress {
+  pointer-events: none;
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 80;
+  height: 2px;
+  overflow: hidden;
+}
+
+.doly-progress__determinate,
+.doly-progress__indeterminate {
+  height: 100%;
+  background: var(--doly-progress-accent, #a92222);
+  box-shadow: 0 0 8px var(--doly-progress-accent, #a92222);
+}
+
+.doly-progress__indeterminate {
+  width: 35%;
+  animation: doly-progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes doly-progress-slide {
+  from {
+    transform: translateX(180%);
+  }
+  to {
+    transform: translateX(-280%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doly-progress__indeterminate {
+    animation: none;
+    width: 100%;
+  }
+}

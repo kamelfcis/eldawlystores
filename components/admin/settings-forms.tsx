@@ -3,12 +3,12 @@
 import { useActionState, useState } from "react";
 import { saveShippingRate, saveWhatsapp } from "@/lib/admin/actions";
 import { formatMoney } from "@/lib/money";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/loading/loading-button";
 import { Input } from "@/components/ui/input";
 import { Field, FormNote, initialFormState } from "./form-bits";
 
 export function WhatsappForm({ number }: { number: string }) {
-  const [state, action, pending] = useActionState(saveWhatsapp, initialFormState);
+  const [state, action] = useActionState(saveWhatsapp, initialFormState);
   return (
     <form action={action} className="space-y-3">
       <Field label="رقم واتساب">
@@ -18,9 +18,9 @@ export function WhatsappForm({ number }: { number: string }) {
         يُحفظ الرقم في إعدادات المتجر. إذا تُرك بدون صف محفوظ يستخدم المتجر الرقم الاحتياطي من التشغيل، دون عرضه هنا.
       </p>
       <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel="جارٍ الحفظ">
           حفظ الرقم
-        </Button>
+        </LoadingButton>
         <FormNote state={state} />
       </div>
     </form>
@@ -36,7 +36,7 @@ export function ShippingRateForm({
   governorate?: string;
   ratePiasters?: number;
 }) {
-  const [state, action, pending] = useActionState(saveShippingRate, initialFormState);
+  const [state, action] = useActionState(saveShippingRate, initialFormState);
   const [rate, setRate] = useState(ratePiasters == null ? "" : String(ratePiasters));
   const parsed = /^\d+$/.test(rate) ? Number(rate) : null;
 
@@ -61,9 +61,9 @@ export function ShippingRateForm({
       </Field>
       <div className="flex items-center gap-3 pb-1">
         <span className="text-[14px] text-graphite">{parsed == null ? "—" : formatMoney(parsed)}</span>
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel="جارٍ الحفظ">
           {id ? "حفظ" : "إضافة"}
-        </Button>
+        </LoadingButton>
       </div>
       <div className="sm:col-span-3">
         <FormNote state={state} />

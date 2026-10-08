@@ -41,7 +41,18 @@ function QuickAdd({ product, className }: { product: ProductWithDetails; classNa
         window.setTimeout(() => setAdded(false), 1600);
       }}
     >
-      {unavailable ? "نفذت الكمية" : added ? "تمت الإضافة" : "أضف إلى السلة"}
+      {unavailable ? (
+        "نفذت الكمية"
+      ) : (
+        <span className="grid">
+          <span className="col-start-1 row-start-1" aria-hidden={added}>
+            أضف إلى السلة
+          </span>
+          <span className="col-start-1 row-start-1" role="status" aria-hidden={!added} style={{ visibility: added ? "visible" : "hidden" }}>
+            تمت الإضافة
+          </span>
+        </span>
+      )}
     </Button>
   );
 }

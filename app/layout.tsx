@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { IBM_Plex_Sans_Arabic, IBM_Plex_Mono } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { WishlistProvider } from "@/components/wishlist/wishlist-provider";
 import { CompareProvider } from "@/components/compare/compare-provider";
 import { ThemeSync } from "@/components/layout/theme-sync";
+import { ProgressBar } from "@/components/loading/progress-bar";
 import "./globals.css";
 
 const themeBoot = `(function(){try{if(location.pathname.indexOf("/admin")===0){document.documentElement.classList.remove("dark");return;}var t=localStorage.getItem("doly-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.classList.toggle("dark",t==="dark");}catch(e){}})();`;
@@ -51,6 +53,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
       <body className="min-h-full flex flex-col antialiased">
+        <Suspense fallback={null}>
+          <ProgressBar />
+        </Suspense>
         <ThemeSync />
         <QueryProvider>
           <CartProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { X } from "lucide-react";
@@ -27,6 +27,7 @@ export function CompareView({ initialIdsFromUrl }: { initialIdsFromUrl: string[]
   const { ids, remove, setIds, ready } = useCompare();
   const [products, setProducts] = useState<ProductWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const shown = useRef(false);
 
   const urlIdsKey = initialIdsFromUrl.join(",");
 
@@ -41,25 +42,32 @@ export function CompareView({ initialIdsFromUrl }: { initialIdsFromUrl: string[]
     if (!ready) return;
     let active = true;
     if (displayIds.length === 0) {
+      shown.current = false;
       setProducts([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    void loadCompareProducts(displayIds).then((result) => {
-      if (!active) return;
-      setProducts(result);
-      setLoading(false);
-    });
+    if (!shown.current) setLoading(true);
+    void loadCompareProducts(displayIds)
+      .then((result) => {
+        if (!active) return;
+        setProducts(result);
+        shown.current = true;
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoading(false);
+      });
 
     return () => {
       active = false;
     };
   }, [displayIds, ready]);
 
-  if (!ready || loading) {
-    return <p className="py-16 text-center text-[16px] text-graphite">جاري التحميل…</p>;
+  if ((!ready || loading) && products.length === 0) {
+    return <p className="py-16 text-center text-[16px] text-graphite" role="status">جاري التحميل…</p>;
   }
 
   if (displayIds.length < 2) {
@@ -140,7 +148,7 @@ export function CompareView({ initialIdsFromUrl }: { initialIdsFromUrl: string[]
   }
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24" aria-busy={loading}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-retail-ink">مقارنة المنتجات</h1>
         <p className="text-[14px] text-retail-muted">{columns.length} منتجات</p>

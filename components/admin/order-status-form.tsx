@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { saveAdminOrderStatus } from "@/lib/admin/actions";
 import type { OrderStatus } from "@/lib/types/database";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/loading/loading-button";
 import { FormNote, initialFormState, selectClass } from "./form-bits";
 
 const statusLabels: Record<OrderStatus, string> = {
@@ -16,7 +16,7 @@ const statusLabels: Record<OrderStatus, string> = {
 };
 
 export function OrderStatusForm({ orderId, status }: { orderId: string; status: OrderStatus }) {
-  const [state, action, pending] = useActionState(saveAdminOrderStatus, initialFormState);
+  const [state, action] = useActionState(saveAdminOrderStatus, initialFormState);
 
   return (
     <form action={action} className="flex flex-wrap items-center gap-2">
@@ -28,9 +28,9 @@ export function OrderStatusForm({ orderId, status }: { orderId: string; status: 
           </option>
         ))}
       </select>
-      <Button type="submit" size="sm" disabled={pending}>
+      <LoadingButton type="submit" size="sm" pendingLabel="جارٍ الحفظ">
         حفظ
-      </Button>
+      </LoadingButton>
       <FormNote state={state} />
     </form>
   );

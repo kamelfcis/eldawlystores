@@ -3,7 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { saveStorefrontBranding } from "@/lib/admin/actions";
 import { announcementGradientCss, parseHexColor, type StorefrontBranding } from "@/lib/store-branding";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/loading/loading-button";
 import { Input } from "@/components/ui/input";
 import { ImageUrlField } from "./image-url-field";
 import { Field, FormNote, initialFormState } from "./form-bits";
@@ -45,7 +45,7 @@ function HexField({
 }
 
 export function BrandingForm({ branding, r2Enabled }: { branding: StorefrontBranding; r2Enabled: boolean }) {
-  const [state, action, pending] = useActionState(saveStorefrontBranding, initialFormState);
+  const [state, action] = useActionState(saveStorefrontBranding, initialFormState);
   const [logoUrl, setLogoUrl] = useState(branding.logoUrl);
   const [gradientStart, setGradientStart] = useState(branding.gradientStart);
   const [gradientMid, setGradientMid] = useState(branding.gradientMid ?? "");
@@ -126,9 +126,9 @@ export function BrandingForm({ branding, r2Enabled }: { branding: StorefrontBran
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={pending}>
+        <LoadingButton type="submit" size="sm" pendingLabel="جارٍ الحفظ">
           حفظ الهوية
-        </Button>
+        </LoadingButton>
         <FormNote state={state} />
       </div>
     </form>
