@@ -54,19 +54,19 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
   const [quickOpen, setQuickOpen] = useState(false);
 
   return (
-    <article className="group relative flex h-full flex-col rounded-[8px] border border-retail-line bg-retail-canvas shadow-[0_8px_24px_rgb(26_33_30/0.06)]">
+    <article className="product-card-lift group relative flex h-full flex-col rounded-[8px] border border-retail-line bg-retail-canvas shadow-[0_8px_24px_rgb(26_33_30/0.06)] motion-safe:will-change-transform">
       <div className="absolute top-2 start-2 z-10 flex flex-col gap-2">
         <WishlistButton productId={product.id} className="h-9 w-9 border-retail-line/80 bg-paper-white/95" />
         <CompareButton productId={product.id} className="h-9 w-9 border-retail-line/80 bg-paper-white/95" />
       </div>
 
       <Link href={`/products/${product.slug}`} className="block rounded-[8px] focus-visible:outline focus-visible:outline-1 focus-visible:outline-retail-ink">
-        <div className="relative aspect-square overflow-hidden rounded-[8px] bg-[#f3f3f3]">
+        <div className="relative aspect-square overflow-hidden rounded-[8px] bg-[#f5f5f3]">
           <Image
             src={imageUrl}
             alt={primary?.alt_text || product.name_ar}
             fill
-            className="object-contain"
+            className="product-card-image-zoom object-contain"
             sizes="(max-width: 768px) 78vw, 25vw"
           />
           {secondary ? (
@@ -75,7 +75,7 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
               alt=""
               aria-hidden
               fill
-              className="product-image-alt object-contain"
+              className="product-image-alt product-card-image-zoom object-contain"
               sizes="(max-width: 768px) 78vw, 25vw"
             />
           ) : null}
@@ -99,7 +99,7 @@ export function ProductCard({ product }: { product: ProductWithDetails }) {
               معاينة سريعة
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:max-h-[90vh] max-sm:max-w-none max-sm:translate-x-[-50%] max-sm:translate-y-0 max-sm:overflow-y-auto max-sm:rounded-t-[8px] max-sm:rounded-b-none">
             <DialogHeader>
               <DialogTitle>{product.name_ar}</DialogTitle>
             </DialogHeader>

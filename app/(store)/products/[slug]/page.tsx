@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog";
 import { ProductPrice, stockLabel } from "@/components/product/product-price";
@@ -7,6 +8,8 @@ import { AddToCartButton } from "@/components/product/add-to-cart-button";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { WishlistButton } from "@/components/wishlist/wishlist-button";
 import { CompareButton } from "@/components/compare/compare-button";
+import { Button } from "@/components/ui/button";
+import { getStoreWhatsapp } from "@/lib/store-settings";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -25,7 +28,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
   if (!product) notFound();
 
   const variant = product.defaultVariant;
-  const related = await getRelatedProducts(product.id);
+  const [related, whatsapp] = await Promise.all([getRelatedProducts(product.id), getStoreWhatsapp()]);
+  const whatsappHref = whatsapp
+    ? `https://wa.me/20${whatsapp.slice(1)}?text=${encodeURIComponent(`مرحبا، أريد الاستفسار عن ${product.name_ar}`)}`
+    : null;
 
   const breadcrumbItems = [
     { label: "الرئيسية", href: "/" },
@@ -48,43 +54,40 @@ export default async function ProductPage({ params }: ProductPageProps) {
           }))}
         />
 
-        <div className="space-y-4">
-          {product.brand && (
-            <p className="text-sm text-graphite">{product.brand.name}</p>
-          )}
+        <div className="space-y-6">
+          {product.brand ? (
+            <p className="text-[14px] font-bold tracking-[0.038em] text-retail-muted">{product.brand.name}</p>
+          ) : null}
           <div className="flex items-start justify-between gap-3">
-            <h1 className="text-2xl font-bold">{product.name_ar}</h1>
+            <h1 className="text-[28px] font-bold leading-[1.15] text-retail-ink sm:text-[32px]">{product.name_ar}</h1>
             <div className="flex shrink-0 items-center gap-2">
               <CompareButton productId={product.id} showLabel />
               <WishlistButton productId={product.id} />
             </div>
           </div>
-          {product.rating && (
-            <p className="text-sm text-graphite">★ {product.rating.toFixed(1)}</p>
-          )}
+          {product.rating ? (
+            <p className="text-[14px] text-graphite">★ {product.rating.toFixed(1)}</p>
+          ) : null}
 
-          <ProductPrice
-            pricePiasters={variant.price_piasters}
-            compareAtPiasters={variant.compare_at_piasters}
-            size="page"
-          />
+          <div className="space-y-2 border-y border-retail-line py-4">
+            <ProductPrice
+              pricePiasters={variant.price_piasters}
+              compareAtPiasters={variant.compare_at_piasters}
+              size="page"
+            />
+            <p className="text-[14px] text-retail-muted">{stockLabel(variant.stock)}</p>
+            <p className="font-mono text-[12px] text-graphite">SKU: {variant.sku}</p>
+          </div>
 
-          <p className="font-mono text-xs text-graphite">SKU: {variant.sku}</p>
-          <p className="text-sm text-retail-muted">{stockLabel(variant.stock)}</p>
-
-          {product.description_ar && (
-            <p className="text-sm text-graphite leading-relaxed">{product.description_ar}</p>
-          )}
-
-          {product.variants.length > 1 && (
+          {product.variants.length > 1 ? (
             <div className="space-y-2">
-              <p className="text-sm font-medium">الخيارات:</p>
+              <p className="text-[14px] font-bold text-retail-ink">الخيارات</p>
               <div className="flex flex-wrap gap-2">
                 {product.variants.map((v) => (
                   <span
                     key={v.id}
-                    className={`rounded-full px-3 py-1 text-xs border ${
-                      v.is_default ? "bg-carbon-ink text-paper-white border-carbon-ink" : "border-ash-border"
+                    className={`rounded-full px-3 py-1 text-[12px] border ${
+                      v.is_default ? "border-carbon-ink bg-carbon-ink text-paper-white" : "border-ash-border text-retail-ink"
                     }`}
                   >
                     {v.sku.split("-").pop()}
@@ -92,9 +95,25 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
-          <AddToCartButton product={product} variant={variant} />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <AddToCartButton product={product} variant={variant} />
+            {whatsappHref ? (
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                  استفسار عبر واتساب
+                </Link>
+              </Button>
+            ) : null}
+          </div>
+
+          {product.description_ar ? (
+            <div className="space-y-2">
+              <h2 className="text-[16px] font-bold text-retail-ink">الوصف</h2>
+              <p className="text-[14px] leading-relaxed text-graphite">{product.description_ar}</p>
+            </div>
+          ) : null}
         </div>
       </div>
 

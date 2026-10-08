@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useOrders } from "@/hooks/use-orders";
 import { formatMoney } from "@/lib/money";
 import type { OrderStatus } from "@/lib/types/database";
@@ -26,10 +27,15 @@ export function AccountOrders({ userId }: { userId: string | null }) {
       ) : (
         <ul className="space-y-3">
           {orders.map((order) => (
-            <li key={order.id} className="flex items-center justify-between gap-3 border-b border-mist pb-3 text-sm">
-              <span className="font-mono text-xs">{order.order_number}</span>
-              <span>{statusLabels[order.status]}</span>
-              <span>{formatMoney(order.total_piasters)}</span>
+            <li key={order.id} className="border-b border-mist pb-3 text-sm">
+              <Link
+                href={`/account/orders/${order.id}`}
+                className="flex items-center justify-between gap-3 rounded-[4px] px-1 py-1 hover:bg-fog"
+              >
+                <span className="font-mono text-xs">{order.order_number}</span>
+                <span>{statusLabels[order.status]}</span>
+                <span>{formatMoney(order.total_piasters)}</span>
+              </Link>
             </li>
           ))}
         </ul>

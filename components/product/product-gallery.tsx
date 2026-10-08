@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
 export interface ProductGalleryImage {
@@ -25,13 +25,30 @@ export function ProductGallery({
 }) {
   const photos = images.filter((image) => image.url.trim().length > 0);
   const [active, setActive] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
   const index = active >= 0 && active < photos.length ? active : 0;
   const current = photos[index] ?? null;
   const src = current?.url ?? "/placeholder-product.svg";
   const alt = current ? imageAlt(current.alt_text, productName) : productName;
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (photos.length < 2) return;
+      if (!rootRef.current?.contains(document.activeElement)) return;
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setActive((currentIndex) => (currentIndex - 1 + photos.length) % photos.length);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setActive((currentIndex) => (currentIndex + 1) % photos.length);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [photos.length]);
+
   return (
-    <div className="min-w-0">
+    <div ref={rootRef} className="min-w-0">
       <div className="relative aspect-square overflow-hidden rounded-[8px] bg-fog">
         <Image
           src={src}

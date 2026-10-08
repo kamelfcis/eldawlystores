@@ -1,16 +1,24 @@
 import { AdminError, AdminPage } from "@/components/admin/admin-ui";
+import { BrandingForm } from "@/components/admin/branding-form";
 import { ShippingRateForm, WhatsappForm } from "@/components/admin/settings-forms";
 import { formatMoney } from "@/lib/money";
 import { getAdminSettings } from "@/lib/admin/queries";
+import { isR2Configured } from "@/lib/storage";
 
 export const metadata = { title: "الإعدادات" };
 
 export default async function AdminSettingsPage() {
-  const { whatsapp, rates, error } = await getAdminSettings();
+  const { whatsapp, branding, rates, error } = await getAdminSettings();
+  const r2Enabled = isR2Configured();
 
   return (
     <AdminPage title="الإعدادات">
       <AdminError message={error} />
+      <section className="rounded-[8px] border border-mist bg-paper-white p-4">
+        <h2 className="mb-3 text-[14px] font-bold tracking-[0.038em]">الهوية</h2>
+        <p className="mb-3 text-[14px] text-graphite">الشعار وألوان شريط الإعلان. نصوص الإعلان تُدار من الصفحة الرئيسية.</p>
+        <BrandingForm branding={branding} r2Enabled={r2Enabled} />
+      </section>
       <section className="rounded-[8px] border border-mist bg-paper-white p-4">
         <h2 className="mb-3 text-[14px] font-bold tracking-[0.038em]">واتساب</h2>
         <WhatsappForm number={whatsapp ?? ""} />

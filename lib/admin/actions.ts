@@ -6,8 +6,9 @@ import { arabicDbError } from "@/lib/admin/errors";
 import { assertAdmin } from "@/lib/auth";
 import { updateAdminOrderStatus } from "@/lib/orders";
 import { createClient } from "@/lib/supabase/server";
+import { serializeStorefrontBranding, STOREFRONT_BRANDING_KEY } from "@/lib/store-branding";
 import { normalizeEgyptianMobile } from "@/lib/store-settings";
-import type { BannerType, OrderStatus, ProductStatus } from "@/lib/types/database";
+import type { BannerType, Json, OrderStatus, ProductStatus } from "@/lib/types/database";
 
 export type FormState = { error: string | null; saved: boolean; notice: string | null };
 
@@ -580,6 +581,43 @@ export async function saveAdminOrderStatus(_prev: FormState, formData: FormData)
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderId}`);
+  return { error: null, saved: true, notice: null };
+}
+
+export async function saveStorefrontBranding(_prev: FormState, formData: FormData): Promise<FormState> {
+  const supabase = await adminClient();
+  const branding = serializeStorefrontBranding({
+    logoUrl: readString(formData, "logoUrl"),
+    gradientStart: readString(formData, "gradientStart"),
+    gradientMid: readString(formData, "gradientMid"),
+    gradientEnd: readString(formData, "gradientEnd"),
+    gradientAngle: Number(readString(formData, "gradientAngle")),
+    marqueeEnabled: readString(formData, "marqueeEnabled") === "true",
+  });
+  if (!branding) {
+    return { error: "بيانات الهوية غير صالحة. استخدم ألواناً سداسية وزاوية بين 0 و360", saved: false, notice: null };
+  }
+
+  const payload: Json = {
+    logoUrl: branding.logoUrl,
+    gradientStart: branding.gradientStart,
+    gradientMid: branding.gradientMid,
+    gradientEnd: branding.gradientEnd,
+    gradientAngle: branding.gradientAngle,
+    marqueeEnabled: branding.marqueeEnabled,
+  };
+
+  const existing = await supabase.from("settings").select("key").eq("key", STOREFRONT_BRANDING_KEY).maybeSingle();
+  if (existing.error) return { error: dbMessage(existing.error), saved: false, notice: null };
+  const { error } = existing.data
+    ? await supabase
+        .from("settings")
+        .update({ value: payload, updated_at: new Date().toISOString() })
+        .eq("key", STOREFRONT_BRANDING_KEY)
+    : await supabase.from("settings").insert({ key: STOREFRONT_BRANDING_KEY, value: payload });
+  if (error) return { error: dbMessage(error), saved: false, notice: null };
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/settings");
   return { error: null, saved: true, notice: null };
 }
 

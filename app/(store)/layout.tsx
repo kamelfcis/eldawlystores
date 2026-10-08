@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { Footer } from "@/components/layout/footer";
 import { WhatsAppFloater } from "@/components/layout/whatsapp-floater";
 import { CompareTray } from "@/components/compare/compare-tray";
+import { StorePwa } from "@/components/pwa/store-pwa";
 import { getStoreWhatsapp } from "@/lib/store-settings";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <Footer />
       <WhatsAppFloater phone={whatsapp} />
       <CompareTray />
+      <StorePwa />
     </div>
   );
 }

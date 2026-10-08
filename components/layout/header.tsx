@@ -2,60 +2,52 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { Search, ShoppingCart, User, Heart } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { useCart } from "@/components/cart/cart-provider";
+import { User, Heart } from "lucide-react";
 import { logout } from "@/lib/auth/actions";
 import type { AccountMenu } from "@/lib/auth";
 import type { Category } from "@/lib/types/database";
 import { CategoryMegaMenu } from "@/components/layout/category-mega-menu";
+import { StoreLogo } from "@/components/layout/store-logo";
+import { CartDrawerTrigger } from "@/components/cart/cart-drawer";
+import { DesktopSearchForm, MobileSearchDialog } from "@/components/layout/mobile-search-dialog";
 
 export function Header({
   categories,
   account,
+  logoUrl,
 }: {
   categories: Category[];
   account: AccountMenu | null;
+  logoUrl: string;
 }) {
-  const { itemCount } = useCart();
-
   return (
     <header className="border-b border-mist bg-paper-white">
-      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-6 px-4">
-        <Link href="/" className="shrink-0 text-[16px] font-bold tracking-[0.057em] text-carbon-ink">
-          Doly Stores
-        </Link>
+      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 sm:gap-6">
+        <div className="order-1 shrink-0">
+          <StoreLogo logoUrl={logoUrl} />
+        </div>
 
-        <CategoryMegaMenu categories={categories} />
+        <div className="order-3 lg:order-2">
+          <CategoryMegaMenu categories={categories} />
+        </div>
 
-        <form action="/products" method="get" className="mx-auto hidden min-w-0 flex-1 sm:block">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-graphite" />
-            <Input
-              name="search"
-              placeholder="ابحث عن منتج"
-              className="h-10 border-ash-border bg-fog pr-9 text-[14px] placeholder:text-graphite"
-            />
-          </div>
-        </form>
+        <div className="order-4 hidden min-w-0 flex-1 sm:order-3 sm:block">
+          <DesktopSearchForm />
+        </div>
 
-        <div className="mr-auto flex items-center gap-1 sm:mr-0">
-          {account ? <AccountMenuButton account={account} /> : (
-            <Link href="/account/login" className="p-2 text-carbon-ink hover:opacity-70" aria-label="حسابي">
-              <User className="h-5 w-5" strokeWidth={1.5} />
-            </Link>
-          )}
-          <Link href="/wishlist" className="relative p-2 text-carbon-ink hover:opacity-70" aria-label="المفضلة">
-            <Heart className="h-5 w-5" strokeWidth={1.5} />
-          </Link>
-          <Link href="/cart" className="relative p-2 text-carbon-ink hover:opacity-70" aria-label="السلة">
-            <ShoppingCart className="h-5 w-5" strokeWidth={1.5} />
-            {itemCount > 0 && (
-              <span className="absolute -top-0.5 -left-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-carbon-ink px-1 text-[10px] text-paper-white">
-                {itemCount}
-              </span>
+        <div className="order-2 ms-auto flex items-center gap-1 lg:order-4 lg:ms-0">
+          <MobileSearchDialog />
+          <div className="hidden items-center gap-1 sm:flex">
+            {account ? <AccountMenuButton account={account} /> : (
+              <Link href="/account/login" className="p-2 text-carbon-ink hover:opacity-70" aria-label="حسابي">
+                <User className="h-5 w-5" strokeWidth={1.5} />
+              </Link>
             )}
-          </Link>
+            <Link href="/wishlist" className="relative p-2 text-carbon-ink hover:opacity-70" aria-label="المفضلة">
+              <Heart className="h-5 w-5" strokeWidth={1.5} />
+            </Link>
+          </div>
+          <CartDrawerTrigger />
         </div>
       </div>
     </header>

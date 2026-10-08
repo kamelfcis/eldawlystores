@@ -1,6 +1,7 @@
 import { arabicDbError } from "@/lib/admin/errors";
 import { assertAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { parseStorefrontBranding, STOREFRONT_BRANDING_KEY } from "@/lib/store-branding";
 import { readWhatsappValue } from "@/lib/store-settings";
 import type { Database, ProductStatus } from "@/lib/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -316,12 +317,17 @@ export async function getAdminSettings() {
   await assertAdmin();
   const supabase = await createClient();
   const [settingsResult, ratesResult] = await Promise.all([
-    supabase.from("settings").select("key, value").eq("key", "whatsapp_number").maybeSingle(),
+    supabase.from("settings").select("key, value").in("key", ["whatsapp_number", STOREFRONT_BRANDING_KEY]),
     supabase.from("shipping_rates").select("id, governorate, rate_piasters").order("governorate"),
   ]);
 
+  const rows = settingsResult.data ?? [];
+  const whatsappRow = rows.find((row) => row.key === "whatsapp_number");
+  const brandingRow = rows.find((row) => row.key === STOREFRONT_BRANDING_KEY);
+
   return {
-    whatsapp: readWhatsappValue(settingsResult.data?.value),
+    whatsapp: readWhatsappValue(whatsappRow?.value),
+    branding: parseStorefrontBranding(brandingRow?.value),
     rates: (ratesResult.data ?? []) as AdminShippingRate[],
     error: arabicDbError(settingsResult.error) ?? arabicDbError(ratesResult.error),
   };

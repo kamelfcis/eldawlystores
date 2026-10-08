@@ -13,6 +13,9 @@ export function ImageUrlField({
   placeholder,
   folder,
   hint,
+  previewClassName,
+  previewFit = "cover",
+  onUrlChange,
 }: {
   name: string;
   defaultValue: string;
@@ -20,8 +23,16 @@ export function ImageUrlField({
   placeholder: string;
   folder: "products" | "banners" | "brands" | "categories";
   hint?: string;
+  previewClassName?: string;
+  previewFit?: "cover" | "contain";
+  onUrlChange?: (url: string) => void;
 }) {
   const [url, setUrl] = useState(defaultValue);
+
+  function updateUrl(next: string) {
+    setUrl(next);
+    onUrlChange?.(next);
+  }
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
 
@@ -55,7 +66,7 @@ export function ImageUrlField({
         setMessage(data.error || "فشل رفع الملف");
         return;
       }
-      setUrl(data.publicUrl);
+      updateUrl(data.publicUrl);
     } finally {
       setUploading(false);
     }
@@ -73,14 +84,15 @@ export function ImageUrlField({
       )}
       {hint ? <p className="text-xs text-graphite">{hint}</p> : null}
       {url ? (
-        <div className="h-[72px] w-[72px] overflow-hidden rounded-[8px] border border-mist bg-fog">
-          <img src={url} alt="" className="h-full w-full object-cover" />
+        <div className={previewClassName ?? "h-[72px] w-[72px] overflow-hidden rounded-[8px] border border-mist bg-fog"}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt="" className={previewFit === "contain" ? "h-full w-full object-contain" : "h-full w-full object-cover"} />
         </div>
       ) : null}
       <details className="rounded-[8px] border border-mist bg-paper-white px-3 py-2">
         <summary className="cursor-pointer text-[14px] text-graphite">رابط اختياري</summary>
         <div className="pt-2">
-          <Input name={name} value={url} onChange={(event) => setUrl(event.target.value)} placeholder={placeholder} />
+          <Input name={name} value={url} onChange={(event) => updateUrl(event.target.value)} placeholder={placeholder} />
         </div>
       </details>
       {message ? <p className="text-xs text-ember-red">{message}</p> : null}

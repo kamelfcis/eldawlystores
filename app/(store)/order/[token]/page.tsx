@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import { getOrderByAccessToken } from "@/lib/orders";
+import { getStoreWhatsapp } from "@/lib/store-settings";
 import type { OrderStatus } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
@@ -24,16 +25,32 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
   const { token } = await params;
   const sp = await searchParams;
   const isConfirmed = sp.confirmed === "1";
-  const lookup = await getOrderByAccessToken(token);
+  const [lookup, whatsapp] = await Promise.all([getOrderByAccessToken(token), getStoreWhatsapp()]);
+  const whatsappHref = whatsapp ? `https://wa.me/20${whatsapp.slice(1)}` : null;
 
   return (
-    <div className="max-w-lg mx-auto space-y-6 py-12">
+    <div className="mx-auto max-w-lg space-y-6 py-12">
       {lookup.status === "found" ? (
-        <div className="space-y-4 text-center">
-          {isConfirmed ? <div className="text-4xl">✓</div> : null}
-          <h1 className="text-2xl font-bold">{isConfirmed ? "تم تأكيد طلبك!" : "تفاصيل الطلب"}</h1>
-          <p className="text-graphite">رقم الطلب: <span className="font-mono">{lookup.order.order_number}</span></p>
-          <p className="text-sm text-graphite">الحالة: {statusLabels[lookup.order.status]}</p>
+        <div className="space-y-5 text-center">
+          {isConfirmed ? (
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-fog text-2xl text-retail-red" aria-hidden>
+              ✓
+            </div>
+          ) : null}
+          <div>
+            <h1 className="text-2xl font-bold text-retail-ink">
+              {isConfirmed ? "تم تأكيد طلبك!" : "تفاصيل الطلب"}
+            </h1>
+            {isConfirmed ? (
+              <p className="mt-2 text-[14px] text-graphite">شكراً لتسوقك من Doly Stores. سنتواصل معك قريباً لتأكيد الطلب.</p>
+            ) : null}
+          </div>
+          <div className="rounded-[8px] border border-mist bg-paper-white p-4 text-start text-sm">
+            <p className="text-graphite">
+              رقم الطلب: <span className="font-mono font-bold text-carbon-ink">{lookup.order.order_number}</span>
+            </p>
+            <p className="mt-1 text-graphite">الحالة: {statusLabels[lookup.order.status]}</p>
+          </div>
           <ul className="space-y-2 text-sm text-right">
             {lookup.order.order_items.map((item) => (
               <li key={item.id} className="flex justify-between gap-4 border-b border-mist pb-2">
@@ -48,7 +65,9 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
         <div className="space-y-4 text-center">
           {isConfirmed ? (
             <>
-              <div className="text-4xl">✓</div>
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-fog text-2xl text-retail-red" aria-hidden>
+                ✓
+              </div>
               <h1 className="text-2xl font-bold">تم تأكيد طلبك!</h1>
               <p className="text-graphite">شكراً لتسوقك من Doly Stores. سنتواصل معك قريباً لتأكيد الطلب.</p>
             </>
@@ -60,10 +79,20 @@ export default async function OrderConfirmationPage({ params, searchParams }: Or
           </p>
         </div>
       )}
-      <div className="text-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Button asChild>
           <Link href="/">العودة للمتجر</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/products">تسوق المزيد</Link>
+        </Button>
+        {whatsappHref ? (
+          <Button asChild variant="outline">
+            <Link href={whatsappHref} target="_blank" rel="noopener noreferrer">
+              تواصل عبر واتساب
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </div>
   );

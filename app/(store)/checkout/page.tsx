@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getGovernorates } from "@/lib/promotions";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { CheckoutStepper } from "@/components/checkout/checkout-stepper";
 
 interface CheckoutPrefill {
   customerName: string;
@@ -146,22 +147,23 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">إتمام الطلب</h1>
+      <CheckoutStepper />
 
       {!ready ? (
         <p className="text-sm text-graphite">جاري تحميل بياناتك...</p>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <fieldset className="space-y-4">
-            <legend className="font-semibold mb-2">بيانات التواصل</legend>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <fieldset className="space-y-4 rounded-[8px] border border-mist p-4">
+            <legend className="px-1 text-[16px] font-bold text-retail-ink">1. بيانات التواصل</legend>
             <Input name="customerName" placeholder="الاسم الكامل" required defaultValue={prefill.customerName} />
             <Input name="customerEmail" type="email" placeholder="البريد الإلكتروني" required defaultValue={prefill.customerEmail} />
             <Input name="customerPhone" type="tel" placeholder="رقم الهاتف" required defaultValue={prefill.customerPhone} />
           </fieldset>
 
-          <fieldset className="space-y-4">
-            <legend className="font-semibold mb-2">عنوان الشحن</legend>
+          <fieldset className="space-y-4 rounded-[8px] border border-mist p-4">
+            <legend className="px-1 text-[16px] font-bold text-retail-ink">2. عنوان الشحن</legend>
             <select name="governorate" required defaultValue={prefill.governorate} className="flex h-10 w-full rounded-[4px] border border-mist bg-paper-white px-3 text-sm">
               <option value="">اختر المحافظة</option>
               {governorateOptions.map((g) => (
@@ -176,18 +178,15 @@ export default function CheckoutPage() {
             </div>
           </fieldset>
 
-          <fieldset className="space-y-4">
-            <legend className="font-semibold mb-2">كود الخصم (اختياري)</legend>
-            <Input name="promoCode" placeholder="DOLY10" />
-          </fieldset>
-
-          <div className="rounded-[8px] border border-mist p-4 space-y-2">
+          <fieldset className="space-y-4 rounded-[8px] border border-mist p-4">
+            <legend className="px-1 text-[16px] font-bold text-retail-ink">3. المراجعة والتأكيد</legend>
+            <Input name="promoCode" placeholder="كود الخصم (اختياري)" />
             <p className="text-sm text-graphite">الدفع: نقداً عند الاستلام</p>
-            <div className="flex justify-between font-bold text-lg">
+            <div className="flex justify-between text-lg font-bold">
               <span>الإجمالي</span>
               <span>{formatMoney(totalPiasters)}</span>
             </div>
-          </div>
+          </fieldset>
 
           {error && <p className="text-ember-red text-sm">{error}</p>}
 

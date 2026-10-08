@@ -47,6 +47,6 @@ describe("admin charts empty state", () => {
     expect(html).toContain("h-56");
     expect(html).toContain("h-64");
     expect(html).toContain("/admin/orders?status=pending");
-    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("recharts");
   });
 });

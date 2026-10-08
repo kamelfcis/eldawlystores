@@ -20,7 +20,7 @@ function HeroPanel({ banner }: { banner: Banner }) {
 
   return (
     <div className="flex h-full min-h-[280px] min-w-0 flex-col justify-center gap-4 overflow-hidden rounded-[8px] bg-obsidian p-5 sm:min-h-[320px] sm:p-6 lg:min-h-[500px] lg:flex-row lg:items-stretch lg:gap-8 lg:p-8">
-      <div className="flex min-w-0 flex-col justify-center gap-3 lg:flex-1 lg:gap-4">
+      <div className="hero-panel-enter flex min-w-0 flex-col justify-center gap-3 lg:flex-1 lg:gap-4">
         {title ? (
           <h1 className="break-words text-[28px] font-bold leading-[1.1] tracking-[-0.025em] text-paper-white sm:text-[40px] lg:text-[48px]">
             {title}
@@ -34,7 +34,7 @@ function HeroPanel({ banner }: { banner: Banner }) {
         ) : null}
       </div>
       {image ? (
-        <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-[8px] lg:aspect-auto lg:max-w-[48%] lg:flex-1 lg:self-stretch">
+        <div className="hero-image-enter relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-[8px] lg:aspect-auto lg:max-w-[48%] lg:flex-1 lg:self-stretch">
           <Image
             src={image}
             alt={title || "غلاف"}
@@ -42,6 +42,10 @@ function HeroPanel({ banner }: { banner: Banner }) {
             preload
             sizes="(max-width: 1024px) 100vw, 720px"
             className="object-cover object-center"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,rgb(169_34_34/0.12),transparent_60%)]"
           />
         </div>
       ) : null}

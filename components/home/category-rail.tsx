@@ -21,12 +21,19 @@ export function CategoryRail({ categories }: { categories: Category[] }) {
 
   return (
     <div className="flex min-w-0 items-start gap-2">
-      <div ref={scrollerRef} className="scrollbar-hide flex min-w-0 flex-1 gap-4 overflow-x-auto pt-2 pb-2">
+      <div
+        ref={scrollerRef}
+        className="scrollbar-hide flex min-w-0 flex-1 snap-x snap-mandatory gap-4 overflow-x-auto pt-2 pb-2"
+      >
         {categories.map((category) => {
           const image = category.image_url?.trim() || null;
           return (
-            <Link key={category.id} href={`/categories/${category.slug}`} className="group w-[88px] shrink-0 text-center">
-              <div className="relative size-[88px] overflow-hidden rounded-full bg-[#f3f3f3] shadow-[0_8px_24px_rgb(26_33_30/0.06)] ring-1 ring-retail-line motion-safe:transition-[translate] motion-safe:duration-200 motion-safe:ease-out md:motion-safe:group-hover:-translate-y-[2px]">
+            <Link
+              key={category.id}
+              href={`/categories/${category.slug}`}
+              className="group w-[88px] shrink-0 snap-start text-center"
+            >
+              <div className="relative size-[88px] overflow-hidden rounded-full bg-[#f3f3f3] shadow-[0_8px_24px_rgb(26_33_30/0.06)] ring-1 ring-retail-line motion-safe:transition-[translate,box-shadow] motion-safe:duration-[var(--motion-micro)] motion-safe:ease-[var(--motion-ease)] md:motion-safe:group-hover:-translate-y-[2px] md:motion-safe:group-focus-visible:-translate-y-[2px] md:group-hover:ring-2 md:group-focus-visible:ring-2 md:group-hover:ring-retail-red md:group-focus-visible:ring-retail-red">
                 {image ? (
                   <Image src={image} alt="" fill sizes="88px" className="object-cover object-center" />
                 ) : null}

@@ -1,6 +1,26 @@
+import { cache } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseAnonKey, getSupabaseUrl, isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Database, Json } from "@/lib/types/database";
+import {
+  defaultStorefrontBranding,
+  parseStorefrontBranding,
+  STOREFRONT_BRANDING_KEY,
+  type StorefrontBranding,
+} from "@/lib/store-branding";
+
+export {
+  announcementGradientCss,
+  DEFAULT_STOREFRONT_BRANDING,
+  HEX_COLOR_RE,
+  parseGradientAngle,
+  parseHexColor,
+  parseLogoUrl,
+  parseStorefrontBranding,
+  serializeStorefrontBranding,
+  STOREFRONT_BRANDING_KEY,
+} from "@/lib/store-branding";
+export type { StorefrontBranding } from "@/lib/store-branding";
 
 export function normalizeEgyptianMobile(raw: string): string | null {
   let digits = raw.replace(/[^\d]/g, "");
@@ -38,6 +58,22 @@ async function settingsReader() {
   }
   return anonClient();
 }
+
+export const getStorefrontBranding = cache(async (): Promise<StorefrontBranding> => {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data } = await (await settingsReader())
+        .from("settings")
+        .select("value")
+        .eq("key", STOREFRONT_BRANDING_KEY)
+        .maybeSingle();
+      return parseStorefrontBranding(data?.value);
+    } catch {
+      return defaultStorefrontBranding();
+    }
+  }
+  return defaultStorefrontBranding();
+});
 
 export async function getStoreWhatsapp(): Promise<string | null> {
   if (isSupabaseConfigured()) {

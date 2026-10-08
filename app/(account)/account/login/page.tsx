@@ -84,8 +84,8 @@ export default function LoginPage({
   }
 
   return (
-    <div className="max-w-md mx-auto space-y-6 py-8">
-      <h1 className="text-2xl font-bold text-center">تسجيل الدخول</h1>
+    <div className="mx-auto max-w-md space-y-6 py-8">
+      <h1 className="text-center text-[28px] font-bold text-retail-ink">تسجيل الدخول</h1>
       {signedIn ? (
         <div role="status" className="rounded-[8px] border border-mist bg-paper-white px-4 py-4">
           <p className="text-[16px] font-bold text-carbon-ink">تم تسجيل الدخول</p>

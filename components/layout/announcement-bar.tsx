@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { announcementGradientCss, type StorefrontBranding } from "@/lib/store-branding";
 
 export interface AnnouncementMessage {
   title: string;
@@ -51,23 +52,39 @@ function AdsSequence({
   );
 }
 
-export function AnnouncementBar({ messages }: { messages: AnnouncementMessage[] }) {
+export function AnnouncementBar({
+  messages,
+  branding,
+}: {
+  messages: AnnouncementMessage[];
+  branding: StorefrontBranding;
+}) {
   const items = widen(messages.filter((message) => message.title.trim().length > 0));
+  const paint = { backgroundImage: announcementGradientCss(branding) };
+  const staticBar = !branding.marqueeEnabled;
 
   if (items.length === 0) {
     return (
-      <div className="flex h-8 items-center justify-center bg-carbon-ink px-4 text-center text-[14px] font-bold tracking-[0.038em] text-paper-white">
-        <p>{FALLBACK}</p>
+      <div className="relative flex h-8 items-center justify-center px-4 text-center text-[14px] font-bold tracking-[0.038em] text-paper-white" style={paint}>
+        <p className="relative z-[1]">{FALLBACK}</p>
+        <span className="ads-bar-sheen" aria-hidden />
       </div>
     );
   }
 
   return (
-    <div className="ads-bar h-8 overflow-hidden bg-carbon-ink text-paper-white" dir="rtl" role="region" aria-label="إعلانات">
-      <div className="ads-track h-full items-center">
+    <div
+      className={staticBar ? "ads-bar ads-bar--static h-8 overflow-hidden text-paper-white" : "ads-bar h-8 overflow-hidden text-paper-white"}
+      dir="rtl"
+      role="region"
+      aria-label="إعلانات"
+      style={paint}
+    >
+      <div className="ads-track relative z-[1] h-full items-center">
         <AdsSequence items={items} />
         <AdsSequence items={items} clone />
       </div>
+      <span className="ads-bar-sheen" aria-hidden />
     </div>
   );
 }

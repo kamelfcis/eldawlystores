@@ -25,7 +25,7 @@ export function WhatsAppFloater({ phone }: { phone: string | null }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="تواصل عبر واتساب"
-      className="fixed bottom-4 start-4 z-40 flex h-12 w-12 items-center justify-center rounded-[8px] border border-retail-line bg-paper-white text-[#128C7E] shadow-[0_8px_24px_rgb(26_33_30/0.06)] transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-1 focus-visible:outline-retail-ink"
+      className="fixed start-4 bottom-20 z-40 flex h-12 w-12 items-center justify-center rounded-[8px] border border-retail-line bg-paper-white text-[#128C7E] shadow-[0_8px_24px_rgb(26_33_30/0.06)] transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-1 focus-visible:outline-retail-ink md:bottom-6"
       onClick={(event) => {
         // Rebuild prefill at click so PDP title/URL are current.
         event.currentTarget.href = `https://wa.me/20${phone.slice(1)}?text=${encodeURIComponent(buildPrefill(pathname))}`;

@@ -63,15 +63,6 @@ export function ProductRail({ products }: ProductRailProps) {
     [alignTo, products.length, reduced]
   );
 
-  useEffect(() => {
-    if (reduced || !canScroll || products.length < 2) return;
-    const id = window.setInterval(() => {
-      if (pausedRef.current) return;
-      go(1, false);
-    }, 5000);
-    return () => window.clearInterval(id);
-  }, [canScroll, go, products.length, reduced]);
-
   function syncPaused() {
     pausedRef.current = hoverPausedRef.current || focusPausedRef.current || pointerPausedRef.current;
   }
@@ -153,7 +144,7 @@ export function ProductRail({ products }: ProductRailProps) {
           <div
             key={product.id}
             data-rail-card
-            className="w-[min(280px,78%)] shrink-0 snap-start sm:w-[calc((100%-24px)/2)] lg:w-[calc((100%-72px)/4)]"
+            className="w-[min(280px,72%)] shrink-0 snap-start md:w-[calc((100%-48px)/3)] lg:w-[calc((100%-72px)/4)] xl:w-[calc((100%-96px)/5)]"
           >
             <ProductCard product={product} />
           </div>

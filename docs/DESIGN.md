@@ -18,7 +18,7 @@ Arabic-first adaptation of the Peak Design Refero spec in `docs/DESIGN (1).md`. 
 | Pewter | `#4e4e4e` | `--color-pewter` | Neutral badges |
 | Ember Red | `#cc2e39` | `--color-ember-red` | Admin discount or low-stock badge |
 | Retail Canvas | `#ffffff` | `--color-retail-canvas` | Storefront page background |
-| Retail Ink | `#141414` | `--color-retail-ink` | Storefront text |
+| Retail Ink | `#0b0b0c` | `--color-retail-ink` | Storefront text |
 | Retail Muted | `#6b6b6b` | `--color-retail-muted` | Storefront secondary text |
 | Retail Line | `#e5e5e5` | `--color-retail-line` | Storefront borders and category rings |
 | Retail Red | `#a92222` | `--color-retail-red` | Current price, the `يوفر` line, the hero CTA, and the خصم badge |
@@ -29,13 +29,13 @@ Arabic-first adaptation of the Peak Design Refero spec in `docs/DESIGN (1).md`. 
 
 `docs/DESIGN (1).md` stays the token source. This file is the Arabic storefront adaptation.
 
-The default is still flat: no shadows, no page gradients, no glass. The admin workspace keeps carbon ink, ember red, and the category colors. Ember red is an admin badge color, not a storefront button or price color. Retail red `#a92222` stays on the current price, the `يوفر` line, the hero CTA, and the خصم badge. The four category colors repeat in this order — teal, blue, amber, violet — by category `sort_order` on filter pills. They are not used on the storefront page background or the homepage canvas.
+The default is still flat: no shadows, no page gradients, no glass. The admin workspace keeps carbon ink, ember red, and the category colors. Ember red is an admin badge color, not a storefront button or price color. Retail red `#a92222` stays on the current price, the `يوفر` line, the hero CTA, and the خصم badge. The four category colors repeat in this order — teal, blue, amber, violet — by category `sort_order` on filter pills. They are not used on the storefront page background or the homepage canvas. The announcement bar is the only storefront exception: it may use a **controlled hex gradient** from `settings.storefront_branding`, never freeform CSS.
 
 ## Depth override
 
-The flat no-shadow rule is lifted only for admin dashboard metric tiles and chart cards, category circles, product cards, and the discount badge. Every other surface stays flat, including the page, the carbon marquee, the obsidian hero, editors, and the latest-orders and low-stock lists.
+The flat no-shadow rule is lifted only for admin dashboard metric tiles and chart cards, category circles, product cards, and the discount badge. Every other surface stays flat, including the page, the announcement bar, the obsidian hero, editors, and the latest-orders and low-stock lists.
 
-Allowed shadow: `0 8px 24px rgb(26 33 30 / 0.06)`. No page gradients. No glass.
+Allowed shadow: `0 8px 24px rgb(26 33 30 / 0.06)`. No page gradients except the announcement bar’s admin hex tokens. No glass.
 
 The خصم badge uses a smaller shadow, `0 2px 6px rgb(26 33 30 / 0.12)`, so the pill stays slight. Category discs also carry a 1px inner highlight: `inset 0 0 0 1px rgb(255 255 255 / 0.9)`.
 
@@ -56,6 +56,19 @@ Do not uppercase Arabic. Do not set Arabic headlines in an italic Latin serif.
 
 4px base. Controls and inputs 4px. Cards and product images 8px. Badges and filter pills fully rounded. Page content max 1440px. Product cards separated by 24px. Section rhythm 80px. Tailwind's default spacing scale matches these steps (`gap-6` = 24px). Do not redefine `--spacing-*` inside `@theme`.
 
+### Motion (storefront)
+
+CSS-only. No Framer Motion.
+
+| Token | Value | Use |
+|-------|-------|-----|
+| `--motion-micro` | `160ms` | Category ring, small hovers |
+| `--motion-normal` | `260ms` | Product card lift, image zoom |
+| `--motion-large` | `480ms` | Hero content/image entrance |
+| `--motion-ease` | `cubic-bezier(0.22, 1, 0.36, 1)` | All storefront transitions |
+
+`prefers-reduced-motion: reduce` disables hero entrance, card lift/zoom, and rail auto-advance. Product rails are user-driven scroll only.
+
 ## Surfaces
 
 | Level | Token | Value |
@@ -71,7 +84,7 @@ White canvas, near-black text, gray secondary text, gray borders, and one retail
 
 Homepage order:
 
-1. Announcement bar: carbon ink, white 14px weight 700, RTL, from active `homepage_banners` where `type = announcement`. Desktop is a marquee (clone, 36s, hover pause). Touch and reduced motion stay a horizontal scroller. An Arabic fallback line shows when no announcement exists. An optional image is 28px. `getBanners` returns database rows as-is when Supabase is configured; mock banners are only used when Supabase is not configured.
+1. Announcement bar: white 14px weight 700, RTL, from active `homepage_banners` where `type = announcement`. Paint comes from `settings.storefront_branding` tokens (`gradientStart` / optional `gradientMid` / `gradientEnd`, `#` + 6 hex digits, `gradientAngle` 0–360). Defaults `#5c1010` → `#a92222` → `#2a0a0a` at 90°. A thin inner highlight overlay is CSS-only, not admin CSS. Desktop and mobile keep the CSS marquee (clone, 36s, hover pause, `touch-action: pan-y`) when `marqueeEnabled` is on. `prefers-reduced-motion` or admin-off switches to a user-controlled `overflow-x` scroller (`touch-action: pan-x pan-y`). Clone links stay `tabIndex=-1`. Region `aria-label="إعلانات"`. An Arabic fallback line shows when no announcement exists. An optional image is 28px. `getBanners` returns database rows as-is when Supabase is configured; mock banners are only used when Supabase is not configured. Copy stays on `/admin/homepage`; colors and logo stay on `/admin/settings` الهوية.
 2. Obsidian split hero: from `lg`, a two-column grid — the first active `type = hero` banner is a ~2/3 `#0c0c0c` panel (min-height about 500px) with a paper-white bold title, fog subtitle, a large 8px cover from that banner’s `image_url` (`object-cover`), and a retail-red button only when `link_url` exists. Remaining hero banners and every `type = offer` banner are bordered paper cards. The photo is about 16:10 and roughly 70% of the card height, with a compact carbon-ink title and graphite subtitle underneath. The sidebar stack is capped at 3 and matches the panel height. Extra cards wrap under the split in a tight 2–3 column row. Below `lg` the panel is full width and cards sit under it. No banners means no hero. No extra slogans.
 3. Category rail: section label `تسوق حسب القسم` in retail ink. 88px raised discs filled edge to edge (`object-cover`, `object-center`) from `categories.image_url`, so the photo fills the circle. Each disc has the allowed depth shadow, a retail-line ring, and a 1px paper inner highlight. Desktop hover lifts `translate-y-[-2px]` with no scale, rotate, or photo overlay. `prefers-reduced-motion` skips the lift. Arabic name, desktop arrows, swipe below `md`, link `/categories/[slug]`. An empty image stays a solid `#f3f3f3` disc. A hairline separates the rail from the hero.
 4. One product rail per category that has active products, 12 products maximum. The title is the category name in retail ink. `عرض الكل` is a retail-ink link to `/categories/[slug]`. A hairline and 40–48px padding (`mt-10 pt-10` / `lg:mt-12 lg:pt-12`) separate the hero, categories, and each rail.
@@ -84,7 +97,31 @@ The product page stays a server component. `components/product/product-gallery.t
 
 ### Homepage rhythm
 
-Keep the order: carbon announcement marquee, obsidian split hero, category circles, then product rails. Do not restore a white carousel or a red ticker. Section hairlines stay `mt-10 pt-10` / `lg:mt-12 lg:pt-12`. The hero title steps 28 / 40 / 48px at leading 1.10. The category label is 16px bold; rail titles are 24px bold and share a baseline with `عرض الكل`. Category discs are 88px, raised, `object-cover` edge to edge, with a retail-line ring that does not inset the photo. Disc arrows sit on the circle’s vertical center. Rail arrows use the retail line, and the control row sits 12px above the cards.
+Keep the order: announcement marquee, obsidian split hero, category circles, then product rails. Do not restore a white carousel or a red ticker. Section hairlines stay `mt-10 pt-10` / `lg:mt-12 lg:pt-12`. The hero title steps 28 / 40 / 48px at leading 1.10. The category label is 16px bold; rail titles are 24px bold and share a baseline with `عرض الكل`. Category discs are 88px, raised, `object-cover` edge to edge, with a retail-line ring that does not inset the photo. Disc arrows sit on the circle’s vertical center. Rail arrows use the retail line, and the control row sits 12px above the cards.
+
+### Header chrome
+
+Mobile row: logo → search icon (Dialog with `GET /products?search=`) → cart drawer → الأقسام sheet. Desktop keeps fog search field with clear control, mega menu, account, wishlist, cart drawer. Cart drawer reuses `useCart`; `/cart` remains the full-page view. Footer uses `max-w-[1440px]`, live categories from `getCategories()`, honest shipping/returns copy, and WhatsApp when configured.
+
+### Header logo
+
+`StoreLogo` is height-driven: `h-[32px] w-auto max-w-[145px]` and `sm:h-[38px] sm:max-w-[180px]`, `shrink-0`, header stays `h-16`. Custom `logoUrl` from branding uses `next/image` for raster and an unoptimized `<img>` for SVG. Empty or invalid URL falls back to `/branding/doly-wordmark.svg` (`viewBox 0 0 360 96`, carbon ink + retail-red accent). If that asset fails, bold text `Doly Stores`. Accessible `alt="Doly Stores"`.
+
+### PWA shell
+
+Installable storefront only. `app/manifest.ts`: name `Doly Stores`, short `Doly`, `lang: ar`, `dir: rtl`, `start_url: "/"`, `display: standalone`, theme carbon `#1a211e`, background `#ffffff`. Square D-mark icons in `public/icons/` (192, 512, maskable) — not a stretched wordmark.
+
+`public/sw.js` registers from the store layout only.
+
+| Request | Strategy |
+|---------|----------|
+| `GET /_next/static/*` | cache-first |
+| Images (same-origin + R2, `destination=image`) | stale-while-revalidate; CDN remains source of truth |
+| Store HTML navigations | network-first; fallback last cached public page or `/offline` |
+| `POST` including `/api/checkout` | never intercepted, never cached as success |
+| `/admin`, `/api/`, `/auth`, `/account` | never intercepted |
+
+Update prompt: `يتوفر تحديث جديد` / `تحديث` → `skipWaiting` + reload only on click. Network chip: `الاتصال ضعيف` / `أنت تعمل بدون اتصال مؤقتاً` / `تم استعادة الاتصال`. Offline page is honest: shell/catalog may be stale; orders cannot be placed. Cart stays `localStorage`. Do not claim a full offline catalog.
 
 ## Admin dashboard
 
@@ -126,7 +163,11 @@ Status colors: pending amber `#c47b12`, confirmed blue `#1d4e89`, shipped teal `
 
 Built:
 
-- WhatsApp floater, shown only when a store number is set
+- Cart drawer from header cart icon (Radix Dialog, same cart state as `/cart`)
+- Mobile product filters: sticky sort + filter drawer on `/products` and category pages
+- Checkout visual stepper (contact → address → review) wrapping the existing single POST form
+- Account order detail with `order_status_history` timeline when queryable
+- WhatsApp floater, shown only when a store number is set (offset above compare tray / PWA chip on mobile)
 - Breadcrumb on category and product pages
 - Quick view on the product card
 - Wishlist in localStorage, with a heart toggle and `/wishlist`
@@ -141,7 +182,7 @@ Not built:
 
 ## RTL and responsive
 
-The document is `dir="rtl"`. Chart plots are `dir="ltr"` so the 14 days read oldest to newest, left to right, with Arabic day labels. Trend charts stack in one column below `lg` and sit side by side from `lg`. The status chart is full width. Category and product rails scroll horizontally on touch; arrows show from `md`. Homepage content stays inside the 1440px frame with 16px page padding. The carbon marquee is full width. Below `lg` the hero panel is full width and offer cards sit under it.
+The document is `dir="rtl"`. Chart plots are `dir="ltr"` so the 14 days read oldest to newest, left to right, with Arabic day labels. Trend charts stack in one column below `lg` and sit side by side from `lg`. The status chart is full width. Category and product rails scroll horizontally on touch; arrows show from `md`. Homepage content stays inside the 1440px frame with 16px page padding. The announcement marquee is full width. Below `lg` the hero panel is full width and offer cards sit under it.
 
 Upload sizes shown on the admin image fields:
 
@@ -149,9 +190,10 @@ Upload sizes shown on the admin image fields:
 |-----|--------|-------|
 | Category | 512×512 (1:1) | 88px circle, `object-cover` |
 | Brand logo | 400×400 PNG | Logo field |
+| Store wordmark | ~360×96 SVG/PNG | Header `StoreLogo`, uploaded via `/api/upload` `folder=brands` |
 | Hero cover | 1600×1000 (16:10) | First active hero `image_url`, large cover on the obsidian panel |
 | Offer | 1200×800 (3:2) | About 16:10, roughly 70% of the card |
-| Announcement icon | 112×112, optional | 28px in the carbon-ink bar |
+| Announcement icon | 112×112, optional | 28px in the announcement bar |
 | Product photo | 1200×1200 (1:1) | Square card, `object-contain` |
 
 ## Money
