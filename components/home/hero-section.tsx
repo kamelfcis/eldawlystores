@@ -1,120 +1,105 @@
 import Image from "next/image";
 import Link from "next/link";
 import { HeroSlider, type HeroSlide } from "@/components/home/hero-slider";
+import { cn } from "@/lib/utils/cn";
 import type { Database } from "@/lib/types/database";
 
 type Banner = Database["public"]["Tables"]["homepage_banners"]["Row"];
-
-const SIDEBAR_CAP = 2;
 
 function bannerHref(banner: Banner) {
   const href = banner.link_url?.trim() ?? "";
   return href.length > 0 ? href : null;
 }
 
-function toSlides(heroes: Banner[]): HeroSlide[] {
-  const slides: HeroSlide[] = [];
-  for (const banner of heroes) {
-    const imageUrl = banner.image_url?.trim() ?? "";
-    if (!imageUrl) continue;
-    slides.push({
-      id: banner.id,
-      title: banner.title_ar.trim(),
-      imageUrl,
-      href: bannerHref(banner),
-    });
-  }
-  return slides;
+function withImage(rows: Banner[]) {
+  return [...rows]
+    .sort((a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id))
+    .filter((banner) => (banner.image_url?.trim() ?? "").length > 0);
 }
 
-function OfferCard({ banner, stretch }: { banner: Banner; stretch?: boolean }) {
+function toSlides(heroes: Banner[]): HeroSlide[] {
+  return heroes.map((banner) => ({
+    id: banner.id,
+    title: banner.title_ar.trim(),
+    imageUrl: (banner.image_url ?? "").trim(),
+    href: bannerHref(banner),
+  }));
+}
+
+function OfferCard({ banner, side, className }: { banner: Banner; side?: boolean; className?: string }) {
   const title = banner.title_ar.trim();
-  const subtitle = banner.subtitle_ar?.trim() ?? "";
-  const image = banner.image_url?.trim() || null;
+  const image = (banner.image_url ?? "").trim();
   const href = bannerHref(banner);
-  const body = (
-    <>
-      {image ? (
-        <div
-          className={
-            stretch
-              ? "relative aspect-[16/10] w-full overflow-hidden lg:aspect-auto lg:min-h-0 lg:flex-1"
-              : "relative aspect-[16/10] w-full overflow-hidden"
-          }
-        >
-          <Image
-            src={image}
-            alt={title || "عرض"}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 360px"
-            className="object-cover object-center"
-          />
-        </div>
-      ) : null}
-      {title || subtitle ? (
-        <div className="min-w-0 space-y-1 px-3 py-2">
-          {title ? <h2 className="line-clamp-2 break-words text-[16px] font-bold text-carbon-ink">{title}</h2> : null}
-          {subtitle ? <p className="line-clamp-2 break-words text-[14px] leading-relaxed text-graphite">{subtitle}</p> : null}
-        </div>
-      ) : null}
-    </>
+  const frame = (
+    <div className={side ? "relative aspect-[3/4] w-full lg:absolute lg:inset-0 lg:aspect-auto" : "relative aspect-[3/4] w-full"}>
+      <Image
+        src={image}
+        alt={title || "عرض"}
+        fill
+        sizes={side ? "(max-width: 1024px) 50vw, 23vw" : "(max-width: 1024px) 50vw, 25vw"}
+        className="object-cover object-center"
+      />
+    </div>
   );
-  const className = stretch
-    ? "flex min-w-0 flex-col overflow-hidden rounded-[8px] border border-retail-line bg-retail-canvas lg:min-h-0 lg:flex-1"
-    : "block min-w-0 overflow-hidden rounded-[8px] border border-retail-line bg-retail-canvas";
+  const cardClass = cn(
+    "relative block min-w-0 overflow-hidden rounded-[8px] border border-retail-line bg-retail-canvas",
+    side && "lg:h-full",
+    className,
+  );
 
   if (href) {
     return (
-      <Link href={href} className={className}>
-        {body}
+      <Link href={href} className={cardClass}>
+        {frame}
       </Link>
     );
   }
 
-  return <article className={className}>{body}</article>;
+  return <article className={cardClass}>{frame}</article>;
+}
+
+function OfferRow({ banners, className }: { banners: Banner[]; className?: string }) {
+  return (
+    <div dir="ltr" className={cn("grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3", className)}>
+      {banners.map((banner) => (
+        <OfferCard key={banner.id} banner={banner} />
+      ))}
+    </div>
+  );
 }
 
 export function HeroSection({ heroes, offers }: { heroes: Banner[]; offers: Banner[] }) {
-  const slides = toSlides(heroes);
+  const slides = toSlides(withImage(heroes));
+  const imagedOffers = withImage(offers);
   const hasSlider = slides.length > 0;
-  const hasOffers = offers.length > 0;
 
-  if (!hasSlider && !hasOffers) return null;
+  if (!hasSlider && imagedOffers.length === 0) return null;
 
-  const sidebar = hasSlider ? offers.slice(0, SIDEBAR_CAP) : [];
-  const extras = hasSlider ? offers.slice(SIDEBAR_CAP) : offers;
-  const mosaic = hasSlider && sidebar.length > 0;
+  const left = hasSlider ? imagedOffers[0] : undefined;
+  const right = hasSlider ? imagedOffers[1] : undefined;
+  const extras = hasSlider ? imagedOffers.slice(2) : imagedOffers;
+  const sideCount = (left ? 1 : 0) + (right ? 1 : 0);
+  const billboardClass =
+    sideCount === 2
+      ? "grid grid-cols-2 items-stretch gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.35fr)_minmax(0,1fr)] lg:gap-3"
+      : "grid grid-cols-2 items-stretch gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,3.35fr)] lg:gap-3";
 
   return (
     <section aria-label={hasSlider ? "الغلاف" : "العروض"} className="min-w-0">
-      <div
-        className={
-          mosaic
-            ? "grid min-w-0 items-stretch gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:min-h-[500px]"
-            : hasSlider
-              ? "min-w-0"
-              : "grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-3"
-        }
-      >
-        {hasSlider ? <HeroSlider slides={slides} /> : null}
-        {sidebar.length > 0 ? (
-          <div className="grid min-w-0 grid-cols-2 gap-3 lg:flex lg:h-full lg:min-h-[500px] lg:flex-col">
-            {sidebar.map((banner) => (
-              <OfferCard key={banner.id} banner={banner} stretch={mosaic} />
-            ))}
+      {hasSlider && sideCount > 0 ? (
+        <div dir="ltr" className={billboardClass}>
+          <div dir="rtl" className="col-span-2 min-w-0 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+            <HeroSlider slides={slides} />
           </div>
-        ) : null}
-        {!hasSlider
-          ? extras.map((banner) => <OfferCard key={banner.id} banner={banner} />)
-          : null}
-      </div>
-      {hasSlider && extras.length > 0 ? (
-        <div className="mt-3 grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-3">
-          {extras.map((banner) => (
-            <OfferCard key={banner.id} banner={banner} />
-          ))}
+          {left ? <OfferCard banner={left} side className="lg:col-start-1 lg:row-start-1" /> : null}
+          {right ? <OfferCard banner={right} side className="lg:col-start-3 lg:row-start-1" /> : null}
         </div>
-      ) : null}
+      ) : hasSlider ? (
+        <HeroSlider slides={slides} />
+      ) : (
+        <OfferRow banners={extras} />
+      )}
+      {hasSlider && extras.length > 0 ? <OfferRow banners={extras} className="mt-2.5 lg:mt-3" /> : null}
     </section>
   );
 }

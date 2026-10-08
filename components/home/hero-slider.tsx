@@ -125,7 +125,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
   return (
     <div
       ref={viewportRef}
-      className="hero-slider relative h-full min-h-0 min-w-0 overflow-hidden rounded-[8px] bg-obsidian focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-retail-ink"
+      className="hero-slider relative h-full min-h-0 min-w-0 overflow-hidden rounded-[8px] border border-retail-line bg-obsidian focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-retail-ink"
       role="region"
       aria-roledescription="carousel"
       aria-label="الغلاف"
@@ -141,7 +141,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
       onPointerUp={endPointer}
       onPointerCancel={endPointer}
     >
-      <div className="relative aspect-[16/10] w-full lg:aspect-auto lg:h-full lg:min-h-[500px]">
+      <div className="relative aspect-[16/10] w-full lg:aspect-[16/9]">
         {slides.map((slide, slideIndex) => {
           const offset = (slideIndex - index) * -100 + dragPercent;
           const title = slide.title;
@@ -154,7 +154,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
               alt={title || "غلاف"}
               fill
               preload={slideIndex === 0}
-              sizes="(max-width: 1024px) 100vw, 960px"
+              sizes="(max-width: 1024px) 100vw, 58vw"
               className="object-cover object-center"
             />
           );

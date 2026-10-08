@@ -9,6 +9,7 @@ function byOrder<T extends { sort_order: number; id: string }>(rows: T[]) {
 }
 
 const sectionRule = "mt-10 border-t border-retail-line pt-10 lg:mt-12 lg:pt-12";
+const categoryRule = "mt-2 border-t border-retail-line pt-2";
 
 export default async function HomePage() {
   const [banners, categories, rails] = await Promise.all([
@@ -19,15 +20,15 @@ export default async function HomePage() {
 
   const heroes = byOrder(banners.filter((banner) => banner.type === "hero"));
   const offers = byOrder(banners.filter((banner) => banner.type === "offer"));
-  const showHero = heroes.length > 0 || offers.length > 0;
+  const showHero = [...heroes, ...offers].some((banner) => (banner.image_url?.trim() ?? "").length > 0);
   const showCategories = categories.length > 0;
 
   return (
     <div className="min-w-0">
       {showHero ? <HeroSection heroes={heroes} offers={offers} /> : null}
       {showCategories ? (
-        <section className={showHero ? sectionRule : undefined} aria-label="تسوق حسب القسم">
-          <h2 className="mb-4 text-[16px] font-bold tracking-[0.038em] text-retail-ink">تسوق حسب القسم</h2>
+        <section className={showHero ? categoryRule : undefined} aria-label="تسوق حسب القسم">
+          <h2 className="mb-2 text-[16px] font-bold tracking-[0.038em] text-retail-ink">تسوق حسب القسم</h2>
           <CategoryRail categories={categories} />
         </section>
       ) : null}
