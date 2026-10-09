@@ -29,6 +29,8 @@ supabase db push --linked
 
 Migrations are in `supabase/migrations/`. Apply only after rotating credentials into `.env.local`.
 
+`20261009073220_egyptian_governorates.sql` inserts the 27 Egyptian governorates into `shipping_rates` with `ON CONFLICT (governorate) DO NOTHING`. It does not remove an existing المنصورة row. Signed-in customers who open `/account/login` or `/account/signup` are redirected to `/account` before the form is shown, including when the URL has `?error=auth`.
+
 `20260930180000_create_checkout_order.sql` adds `create_checkout_order`. Guest checkout calls that function with the server-only `SUPABASE_SERVICE_ROLE_KEY`. Do not put that key in client code or in this document.
 
 ## First admin

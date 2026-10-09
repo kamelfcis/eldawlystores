@@ -44,9 +44,9 @@ export function validatePromoCode(
   return { valid: true, discountPiasters: Math.min(discountPiasters, subtotalPiasters) };
 }
 
-export function getShippingRate(governorate: string): number {
+export function getShippingRate(governorate: string): number | null {
   const rate = mockShippingRates.find((r) => r.governorate === governorate);
-  return rate?.rate_piasters ?? 10000;
+  return rate?.rate_piasters ?? null;
 }
 
 export function getGovernorates(): string[] {

@@ -1,10 +1,14 @@
 import { z } from "zod";
+import { getGovernorates } from "@/lib/promotions";
 
 export const checkoutSchema = z.object({
   customerName: z.string().min(2, "الاسم مطلوب"),
   customerEmail: z.string().email("البريد الإلكتروني غير صالح"),
   customerPhone: z.string().min(10, "رقم الهاتف مطلوب"),
-  governorate: z.string().min(1, "المحافظة مطلوبة"),
+  governorate: z
+    .string()
+    .min(1, "المحافظة مطلوبة")
+    .refine((value) => getGovernorates().includes(value), "المحافظة غير متاحة"),
   city: z.string().min(1, "المدينة مطلوبة"),
   street: z.string().min(1, "الشارع مطلوب"),
   building: z.string().optional(),

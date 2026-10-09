@@ -7,6 +7,7 @@ import { log } from "@/lib/logging";
 import { sendOrderEmail } from "@/lib/email";
 import { getOrderStore } from "@/lib/orders";
 import type { Json } from "@/lib/types/database";
+import { isStoredVariantId } from "./variant-id";
 import type { CheckoutInput } from "./schema";
 
 export interface CheckoutResult {
@@ -76,12 +77,26 @@ function publicCheckoutError(message: string): string {
 }
 
 async function processCheckoutWithServiceRole(input: CheckoutInput): Promise<CheckoutResult> {
+  if (input.items.some((item) => !isStoredVariantId(item.variantId))) {
+    return { success: false, error: "منتج غير موجود في السلة" };
+  }
+
   const { createServiceClient } = await import("@/lib/supabase/server");
   const supabase = createServiceClient();
   const items: Json = input.items.map((item) => ({
     variant_id: item.variantId,
     quantity: item.quantity,
   }));
+
+  const { data: shippingRate, error: shippingError } = await supabase
+    .from("shipping_rates")
+    .select("rate_piasters")
+    .eq("governorate", input.governorate)
+    .maybeSingle();
+
+  if (shippingError || shippingRate == null) {
+    return { success: false, error: "المحافظة غير متاحة" };
+  }
 
   const { data, error } = await supabase.rpc("create_checkout_order", {
     p_customer_name: input.customerName,
@@ -157,6 +172,10 @@ async function processMockCheckout(input: CheckoutInput): Promise<CheckoutResult
   }
 
   const shippingPiasters = getShippingRate(input.governorate);
+  if (shippingPiasters == null) {
+    return { success: false, error: "المحافظة غير متاحة" };
+  }
+
   const totals = calculateOrderTotals({
     items: itemValidation.lineItems.map((i) => ({ unitPricePiasters: i.unitPricePiasters, quantity: i.quantity })),
     shippingPiasters,
@@ -215,6 +234,10 @@ async function processMockCheckout(input: CheckoutInput): Promise<CheckoutResult
 }
 
 export async function processCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+  if (getShippingRate(input.governorate) == null) {
+    return { success: false, error: "المحافظة غير متاحة" };
+  }
+
   if (isServiceRoleConfigured()) {
     return processCheckoutWithServiceRole(input);
   }
