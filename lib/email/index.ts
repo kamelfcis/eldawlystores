@@ -234,46 +234,49 @@ function detailRow(label: string, value: string): string {
   </tr>`;
 }
 
-function imageCell(line: OrderEmailLine): string {
+function productImageCell(line: OrderEmailLine): string {
   const src = httpImageUrl(line.imageUrl);
   const inner = src
-    ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(line.productName)}" width="64" height="64" style="display:block;width:64px;height:64px;border:0;outline:none;text-decoration:none;" />`
-    : "&nbsp;";
-  return `<td width="72" height="72" align="center" valign="middle" bgcolor="#f6f1ec" style="width:72px;height:72px;padding:4px;background-color:#f6f1ec;border-bottom:1px solid #e6ddd4;">${inner}</td>`;
+    ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(line.productName)}" width="72" border="0" style="display:block;width:72px;max-width:100%;height:auto;border:0;border-radius:8px;outline:none;text-decoration:none;" />`
+    : "";
+  return `<td width="18%" align="center" valign="middle" bgcolor="#f6f1ec" style="width:18%;padding:8px;background-color:#f6f1ec;border-bottom:1px solid #e6ddd4;">${inner}</td>`;
 }
 
-function lineCell(value: string, width: number | null, align: "right" | "center"): string {
-  const widthAttr = width ? ` width="${width}"` : "";
-  const widthStyle = width ? `width:${width}px;` : "";
-  return `<td${widthAttr} valign="middle" align="${align}" bgcolor="#ffffff" style="${widthStyle}padding:10px 8px;font-family:${RECEIPT_FONT};font-size:13px;line-height:1.5;color:#1c1614;background-color:#ffffff;border-bottom:1px solid #e6ddd4;">${value}</td>`;
+function productNameCell(line: OrderEmailLine): string {
+  const sku = line.sku?.trim() ?? "";
+  const skuHtml = sku
+    ? `<div style="font-family:${RECEIPT_FONT};font-size:12px;line-height:1.4;color:#6b5e56;padding-top:2px;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;">${escapeHtml(sku)}</div>`
+    : "";
+  return `<td width="46%" valign="middle" align="right" bgcolor="#ffffff" style="width:46%;padding:10px 8px;font-family:${RECEIPT_FONT};font-size:13px;line-height:1.5;color:#1c1614;background-color:#ffffff;border-bottom:1px solid #e6ddd4;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;"><div style="font-family:${RECEIPT_FONT};font-size:13px;line-height:1.5;color:#1c1614;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;">${escapeHtml(line.productName)}</div>${skuHtml}</td>`;
+}
+
+function productAmountCell(line: OrderEmailLine): string {
+  const quantity = lineQuantity(line);
+  const unit = line.unitPriceFormatted?.trim()
+    ? `<div style="font-family:${RECEIPT_FONT};font-size:13px;line-height:1.5;color:#1c1614;">${escapeHtml(line.unitPriceFormatted.trim())}</div>`
+    : "";
+  return `<td width="36%" valign="middle" align="right" bgcolor="#ffffff" style="width:36%;padding:10px 8px;font-family:${RECEIPT_FONT};font-size:13px;line-height:1.5;color:#1c1614;background-color:#ffffff;border-bottom:1px solid #e6ddd4;"><div style="font-family:${RECEIPT_FONT};font-size:13px;line-height:1.5;color:#1c1614;">الكمية ${quantity}</div>${unit}<div style="font-family:${RECEIPT_FONT};font-size:13px;line-height:1.5;font-weight:bold;color:#1c1614;">${escapeHtml(line.lineTotalFormatted)}</div></td>`;
 }
 
 function renderReceiptLines(lines: OrderEmailLine[] | undefined): string {
   if (!lines?.length) return "";
   const header = `<tr>
-    <td width="72" bgcolor="#f6efe6" style="width:72px;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">صورة</td>
-    <td bgcolor="#f6efe6" style="padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">المنتج</td>
-    <td width="88" bgcolor="#f6efe6" style="width:88px;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">الرمز</td>
-    <td width="88" align="center" bgcolor="#f6efe6" style="width:88px;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">الكمية</td>
-    <td width="96" bgcolor="#f6efe6" style="width:96px;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">سعر الوحدة</td>
-    <td width="96" bgcolor="#f6efe6" style="width:96px;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">الإجمالي</td>
+    <td width="18%" bgcolor="#f6efe6" style="width:18%;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">صورة</td>
+    <td width="46%" bgcolor="#f6efe6" style="width:46%;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">المنتج</td>
+    <td width="36%" bgcolor="#f6efe6" style="width:36%;padding:8px;font-family:${RECEIPT_FONT};font-size:12px;font-weight:bold;color:#1c1614;background-color:#f6efe6;border-bottom:1px solid #e6ddd4;">الكمية · سعر الوحدة · الإجمالي</td>
   </tr>`;
   const rows = lines
-    .map((line) => {
-      const quantity = lineQuantity(line);
-      return `<tr>
-        ${imageCell(line)}
-        ${lineCell(escapeHtml(line.productName), null, "right")}
-        ${lineCell(escapeHtml(line.sku?.trim() ?? ""), 88, "right")}
-        ${lineCell(`الكمية ${quantity}`, 88, "center")}
-        ${lineCell(escapeHtml(line.unitPriceFormatted ?? ""), 96, "right")}
-        ${lineCell(escapeHtml(line.lineTotalFormatted), 96, "right")}
-      </tr>`;
-    })
+    .map(
+      (line) => `<tr>
+        ${productImageCell(line)}
+        ${productNameCell(line)}
+        ${productAmountCell(line)}
+      </tr>`
+    )
     .join("");
   return `<tr>
-    <td style="padding:8px 24px 0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;border-collapse:collapse;background-color:#ffffff;">
+    <td width="100%" style="width:100%;padding:8px 24px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;border-collapse:collapse;table-layout:fixed;background-color:#ffffff;">
         ${header}
         ${rows}
       </table>
@@ -305,10 +308,14 @@ function renderReceiptHtml(subject: string, data: OrderEmailContent, logoUrl: st
       <td align="center" style="padding:24px 12px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" dir="rtl" style="width:600px;max-width:600px;background-color:#ffffff;">
           <tr>
-            <td bgcolor="#1a211e" style="padding:22px 24px;font-family:${RECEIPT_FONT};background-color:#1a211e;">
-              <img src="${logoSrc}" alt="Doly Stores" width="148" border="0" style="display:block;width:148px;height:auto;max-height:40px;border:0;outline:none;text-decoration:none;" />
-              <div style="font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;">Doly Stores</div>
-              <div style="font-family:${RECEIPT_FONT};font-size:15px;line-height:1.5;color:#ffffff;padding-top:6px;">${escapeHtml(subject)}</div>
+            <td width="100%" bgcolor="#1a211e" style="width:100%;padding:12px 16px;background-color:#1a211e;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#1a211e" style="width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;background-color:#1a211e;">
+                <tr>
+                  <td width="32%" align="center" valign="middle" bgcolor="#ffffff" style="width:32%;padding:8px;background-color:#ffffff;border-radius:12px;"><img src="${logoSrc}" alt="Doly Stores" width="148" border="0" style="display:block;width:148px;height:auto;max-height:40px;border:0;outline:none;text-decoration:none;" /></td>
+                  <td width="34%" valign="middle" align="right" bgcolor="#1a211e" style="width:34%;padding:8px 12px;font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;background-color:#1a211e;"><div style="font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;">Doly Stores</div></td>
+                  <td width="34%" valign="middle" align="right" bgcolor="#1a211e" style="width:34%;padding:8px 12px;font-family:${RECEIPT_FONT};font-size:15px;line-height:1.5;color:#ffffff;background-color:#1a211e;">${escapeHtml(subject)}</td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>

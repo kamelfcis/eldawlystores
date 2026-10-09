@@ -43,6 +43,26 @@ import {
 
 const EMAIL_LOGO_FALLBACK = "https://eldawlystores.vercel.app/branding/doly-wordmark.svg";
 
+function extractRows(html: string): string[] {
+  const rows: string[] = [];
+  const token = /<\/?tr\b[^>]*>/gi;
+  const stack: number[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = token.exec(html))) {
+    if (/^<tr\b/i.test(match[0])) {
+      stack.push(match.index);
+    } else if (stack.length) {
+      const start = stack.pop()!;
+      rows.push(html.slice(start, match.index + match[0].length));
+    }
+  }
+  return rows;
+}
+
+function leafRows(html: string): string[] {
+  return extractRows(html).filter((row) => !row.slice(3).includes("<tr"));
+}
+
 const orderMail = {
   orderNumber: "DOLY-1",
   customerName: "أحمد",
@@ -171,8 +191,19 @@ describe("sendOrderEmail", () => {
     expect(html).toContain("color:#ffffff");
     expect(html).toContain('bgcolor="#a92222"');
     expect(html).toContain('height="4"');
+    expect(html).toContain("table-layout:fixed");
     expect(html).not.toContain("#7d1414");
     expect(html).not.toContain(EMAIL_LOGO_FALLBACK);
+    const headerRow = leafRows(html).find(
+      (row) => row.includes('width="32%"') && row.includes('alt="Doly Stores"')
+    );
+    expect(headerRow).toBeTruthy();
+    expect(headerRow).toContain('src="https://cdn.example/wordmark.svg"');
+    expect(headerRow).toContain(">Doly Stores</div>");
+    expect(headerRow).toContain("تأكيد طلبك #DOLY-1");
+    expect(headerRow).toContain('width="34%"');
+    expect(headerRow).toContain("border-radius:12px");
+    expect(headerRow).toMatch(/<td\b[^>]*width="32%"[^>]*border-radius:12px[^>]*>/);
     expect(sendMock.mock.calls[0]?.[0]?.subject).toBe("تأكيد طلبك #DOLY-1");
   });
 
@@ -185,6 +216,10 @@ describe("sendOrderEmail", () => {
     expect(html).toContain('alt="Doly Stores"');
     expect(html).not.toContain("/images/store-mark.png");
     expect(html).not.toContain('src="/branding/doly-wordmark.svg"');
+    const headerRow = leafRows(html).find((row) => row.includes('width="32%"'));
+    expect(headerRow).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
+    expect(headerRow).toContain("border-radius:12px");
+    expect(headerRow).not.toContain("/images/store-mark.png");
     expect(sendMock.mock.calls[0]?.[0]?.subject).toBe("طلب جديد #DOLY-1");
 
     brandingMock.mockResolvedValue({ logoUrl: "/branding/doly-wordmark.svg" });
@@ -286,8 +321,32 @@ describe("customer confirmation html", () => {
     expect(payload.html).toContain("https://cdn.example/phone.jpg");
     expect(payload.html).not.toContain("placeholder-product.svg");
     expect(payload.html).not.toContain("products/phone.jpg");
+    expect(payload.html).toContain("table-layout:fixed");
     expect(payload.text).toContain("https://cdn.example/phone.jpg");
     expect(payload.text).not.toContain("placeholder-product.svg");
+
+    const productRow = leafRows(payload.html).find(
+      (row) => row.includes("https://cdn.example/phone.jpg") && row.includes("هاتف ظاهر")
+    );
+    expect(productRow).toBeTruthy();
+    expect(productRow).toContain(lineTotal);
+    expect(productRow).toContain('width="18%"');
+    expect(productRow).toContain('width="46%"');
+    expect(productRow).toContain('width="36%"');
+    expect(productRow).toContain("border-radius:8px");
+    expect(productRow).toContain("SKU-1");
+    const productHeader = leafRows(payload.html).find(
+      (row) => row.includes(">صورة<") && row.includes(">المنتج<")
+    );
+    expect(productHeader).toContain('width="18%"');
+    expect(productHeader).toContain('width="46%"');
+    expect(productHeader).toContain('width="36%"');
+    for (const name of ["بدون صورة", "مفتاح تخزين"]) {
+      const emptyRow = leafRows(payload.html).find((row) => row.includes(name));
+      expect(emptyRow).toBeTruthy();
+      expect(emptyRow).not.toContain("<img");
+      expect(emptyRow).toContain('width="18%"');
+    }
 
     const httpPayload = buildOrderEmailHtml("order-confirmed-customer", {
       orderNumber: "DOLY-2",
