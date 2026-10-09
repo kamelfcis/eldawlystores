@@ -28,7 +28,12 @@ vi.mock("resend", () => ({
   },
 }));
 
-import { buildOrderEmailHtml, parseAdminNotificationEmails, sendOrderEmail } from "@/lib/email";
+import {
+  buildOrderEmailHtml,
+  parseAdminNotificationEmails,
+  resolveEmailImageUrl,
+  sendOrderEmail,
+} from "@/lib/email";
 
 const orderMail = {
   orderNumber: "DOLY-1",
@@ -123,6 +128,21 @@ describe("sendOrderEmail", () => {
     expect(sent?.text).toContain("تأكيد طلبك #DOLY-1");
     expect(sent?.text).toContain(orderMail.totalFormatted);
     expect(sent?.replyTo).toBe("sales@eldawlystores.shop");
+    expect(sent?.html).toContain("<table");
+    expect(sent?.html).toContain(orderMail.totalFormatted);
+  });
+
+  it("puts the customer phone in the admin receipt table", async () => {
+    process.env.ADMIN_NOTIFICATION_EMAIL = "one@example.com";
+    await sendOrderEmail("new-order-admin", {
+      ...orderMail,
+      customerPhone: "01012345678",
+    });
+    const html = sendMock.mock.calls[0]?.[0]?.html as string;
+    expect(html).toContain("01012345678");
+    expect(html).toContain("<table");
+    expect(html).toContain("#a92222");
+    expect(html).toContain('lang="ar"');
   });
 });
 
@@ -140,6 +160,7 @@ describe("customer confirmation html", () => {
     expect(payload.subject).toBe("تأكيد طلبك #DOLY-9");
     expect(payload.reply_to).toBe("sales@eldawlystores.shop");
     expect(payload.html).toContain('dir="rtl"');
+    expect(payload.html).toContain("<table");
     expect(payload.html).toContain("رقم الطلب: DOLY-9");
     expect(payload.html).toContain(totalFormatted);
     expect(payload.html).toContain(lineTotalFormatted);
@@ -156,5 +177,159 @@ describe("customer confirmation html", () => {
     expect(payload.text).toContain("أحمد <script>");
     expect(payload.text).not.toContain("&amp;");
     expect(payload.text).not.toContain("&lt;");
+  });
+
+  it("renders an image only for an absolute http(s) url", () => {
+    const totalFormatted = formatMoney(150000);
+    const lineTotal = formatMoney(100000);
+    const payload = buildOrderEmailHtml("order-confirmed-customer", {
+      orderNumber: "DOLY-2",
+      customerName: "أحمد",
+      totalFormatted,
+      lines: [
+        {
+          productName: "هاتف ظاهر",
+          sku: "SKU-1",
+          quantity: 1,
+          unitPriceFormatted: lineTotal,
+          lineTotalFormatted: lineTotal,
+          imageUrl: "https://cdn.example/phone.jpg",
+        },
+        {
+          productName: "بدون صورة",
+          quantity: 1,
+          lineTotalFormatted: formatMoney(50000),
+          imageUrl: "/placeholder-product.svg",
+        },
+        {
+          productName: "مفتاح تخزين",
+          quantity: 1,
+          lineTotalFormatted: formatMoney(10000),
+          imageUrl: "products/phone.jpg",
+        },
+      ],
+    });
+
+    expect(payload.html.match(/<img\b/g)).toHaveLength(1);
+    expect(payload.html).toContain("https://cdn.example/phone.jpg");
+    expect(payload.html).not.toContain("placeholder-product.svg");
+    expect(payload.html).not.toContain("products/phone.jpg");
+    expect(payload.text).toContain("https://cdn.example/phone.jpg");
+    expect(payload.text).not.toContain("placeholder-product.svg");
+
+    const httpPayload = buildOrderEmailHtml("order-confirmed-customer", {
+      orderNumber: "DOLY-2",
+      customerName: "أحمد",
+      totalFormatted,
+      lines: [
+        {
+          productName: "هاتف",
+          quantity: 1,
+          lineTotalFormatted: lineTotal,
+          imageUrl: "http://cdn.example/phone.jpg",
+        },
+      ],
+    });
+    expect(httpPayload.html.match(/<img\b/g)).toHaveLength(1);
+
+    const hostile = buildOrderEmailHtml("order-confirmed-customer", {
+      orderNumber: "DOLY-2",
+      customerName: "أحمد",
+      totalFormatted,
+      lines: [
+        {
+          productName: 'صورة <script>',
+          quantity: 1,
+          lineTotalFormatted: lineTotal,
+          imageUrl: 'https://cdn.example/a.jpg?x="><script>',
+        },
+      ],
+    });
+    expect(hostile.html).toContain("<img");
+    expect(hostile.html).toContain("&quot;");
+    expect(hostile.html).toContain("&lt;script&gt;");
+    expect(hostile.html).not.toContain("<script>");
+    expect(hostile.text).toContain('https://cdn.example/a.jpg?x="><script>');
+    expect(hostile.text).toContain('صورة <script>');
+    expect(hostile.text).not.toContain("&lt;");
+  });
+
+  it("includes building and floor only when they were saved", () => {
+    const base = {
+      orderNumber: "DOLY-3",
+      customerName: "أحمد",
+      customerPhone: "01099999999",
+      totalFormatted: formatMoney(10000),
+      paymentMethod: "cod",
+      status: "pending",
+    };
+    const withFloor = buildOrderEmailHtml("new-order-admin", {
+      ...base,
+      shippingAddress: {
+        governorate: "القاهرة",
+        city: "مدينة نصر",
+        street: "عباس العقاد",
+        building: "12",
+        floor: "3",
+      },
+    });
+    expect(withFloor.html).toContain("01099999999");
+    expect(withFloor.html).toContain("الدفع عند الاستلام");
+    expect(withFloor.html).toContain("قيد الانتظار");
+    expect(withFloor.text).toContain("العنوان: القاهرة، مدينة نصر، عباس العقاد، 12، 3");
+    expect(withFloor.text).toContain("الهاتف: 01099999999");
+
+    const without = buildOrderEmailHtml("new-order-admin", {
+      ...base,
+      shippingAddress: {
+        governorate: "القاهرة",
+        city: "مدينة نصر",
+        street: "عباس العقاد",
+        building: " ",
+        floor: "",
+      },
+    });
+    expect(without.text).toContain("العنوان: القاهرة، مدينة نصر، عباس العقاد");
+    expect(without.text).not.toContain("عباس العقاد،");
+  });
+
+  it("keeps shipped mail as the shorter notice", () => {
+    const payload = buildOrderEmailHtml("order-shipped", {
+      ...orderMail,
+      status: "shipped",
+    });
+    expect(payload.html).not.toContain("<table");
+    expect(payload.html).toContain("تم شحن طلبك #DOLY-1");
+    expect(payload.html).toContain("الحالة: shipped");
+    expect(payload.text).not.toContain("الدفع عند الاستلام");
+    expect(payload.text).not.toContain("قيد الانتظار");
+  });
+});
+
+describe("resolveEmailImageUrl", () => {
+  const previousPublic = process.env.R2_PUBLIC_URL;
+
+  afterEach(() => {
+    if (previousPublic === undefined) delete process.env.R2_PUBLIC_URL;
+    else process.env.R2_PUBLIC_URL = previousPublic;
+  });
+
+  it("keeps absolute urls and drops relative paths", () => {
+    process.env.R2_PUBLIC_URL = "https://cdn.example";
+    expect(resolveEmailImageUrl("https://cdn.example/phone.jpg")).toBe("https://cdn.example/phone.jpg");
+    expect(resolveEmailImageUrl("http://cdn.example/phone.jpg")).toBe("http://cdn.example/phone.jpg");
+    expect(resolveEmailImageUrl("/placeholder-product.svg")).toBeUndefined();
+    expect(resolveEmailImageUrl("../secret.jpg")).toBeUndefined();
+    expect(resolveEmailImageUrl("javascript:alert(1)")).toBeUndefined();
+    expect(resolveEmailImageUrl("  ")).toBeUndefined();
+  });
+
+  it("uses getPublicUrl only for a bare key when the result is https", () => {
+    process.env.R2_PUBLIC_URL = "https://cdn.example";
+    expect(resolveEmailImageUrl("products/phone.jpg")).toBe("https://cdn.example/products/phone.jpg");
+    process.env.R2_PUBLIC_URL = "http://cdn.example";
+    expect(resolveEmailImageUrl("products/phone.jpg")).toBeUndefined();
+    delete process.env.R2_PUBLIC_URL;
+    expect(resolveEmailImageUrl("products/phone.jpg")).toBeUndefined();
   });
 });

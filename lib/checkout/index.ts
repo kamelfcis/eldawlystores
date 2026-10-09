@@ -1,12 +1,19 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { mockProducts } from "@/lib/mock-data";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { isServiceRoleConfigured } from "@/lib/supabase/service-role";
 import { calculateOrderTotals, formatMoney } from "@/lib/money";
 import { validatePromoCode, getShippingRate } from "@/lib/promotions";
 import { log, logWarn } from "@/lib/logging";
-import { sendOrderEmail, type OrderEmailLine } from "@/lib/email";
+import {
+  resolveEmailImageUrl,
+  sendOrderEmail,
+  type OrderEmailAddress,
+  type OrderEmailData,
+  type OrderEmailLine,
+} from "@/lib/email";
 import { getOrderStore } from "@/lib/orders";
-import type { Json } from "@/lib/types/database";
+import type { Database, Json } from "@/lib/types/database";
 import { isStoredVariantId } from "./variant-id";
 import type { CheckoutInput } from "./schema";
 
@@ -76,6 +83,88 @@ function publicCheckoutError(message: string): string {
   return "تعذر إتمام الطلب";
 }
 
+function addressFromParts(parts: {
+  governorate?: string | null;
+  city?: string | null;
+  street?: string | null;
+  building?: string | null;
+  floor?: string | null;
+}): OrderEmailAddress | undefined {
+  const text = (value: string | null | undefined) => value?.trim() ?? "";
+  const governorate = text(parts.governorate);
+  const city = text(parts.city);
+  const street = text(parts.street);
+  const building = text(parts.building);
+  const floor = text(parts.floor);
+  if (!governorate && !city && !street && !building && !floor) return undefined;
+  return {
+    ...(governorate ? { governorate } : {}),
+    ...(city ? { city } : {}),
+    ...(street ? { street } : {}),
+    ...(building ? { building } : {}),
+    ...(floor ? { floor } : {}),
+  };
+}
+
+function shippingAddressFromJson(value: Json | null | undefined): OrderEmailAddress | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, Json | undefined>;
+  const text = (key: string) => (typeof record[key] === "string" ? record[key] : "");
+  return addressFromParts({
+    governorate: text("governorate"),
+    city: text("city"),
+    street: text("street"),
+    building: text("building"),
+    floor: text("floor"),
+  });
+}
+
+async function loadVariantImageUrls(
+  supabase: SupabaseClient<Database>,
+  variantIds: string[]
+): Promise<Map<string, string>> {
+  const images = new Map<string, string>();
+  const ids = [...new Set(variantIds.filter((id) => id.length > 0))];
+  if (ids.length === 0) return images;
+
+  const { data: variants, error: variantsError } = await supabase
+    .from("product_variants")
+    .select("id, product_id")
+    .in("id", ids);
+  if (variantsError || !variants?.length) return images;
+
+  const productIds = [...new Set(variants.map((variant) => variant.product_id))];
+  const { data: productImages, error: imagesError } = await supabase
+    .from("product_images")
+    .select("product_id, url, sort_order")
+    .in("product_id", productIds)
+    .order("sort_order", { ascending: true });
+  if (imagesError || !productImages) return images;
+
+  const firstByProduct = new Map<string, string | undefined>();
+  const ranked = [...productImages].sort((a, b) => a.sort_order - b.sort_order);
+  for (const image of ranked) {
+    if (firstByProduct.has(image.product_id)) continue;
+    firstByProduct.set(image.product_id, resolveEmailImageUrl(image.url));
+  }
+
+  for (const variant of variants) {
+    const url = firstByProduct.get(variant.product_id);
+    if (url) images.set(variant.id, url);
+  }
+  return images;
+}
+
+async function deliverCheckoutEmails(data: OrderEmailData, orderId: string): Promise<void> {
+  try {
+    await sendOrderEmail("new-order-admin", data);
+    await sendOrderEmail("order-confirmed-customer", data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    logWarn("email.failed", { orderId, error: message });
+  }
+}
+
 async function processCheckoutWithServiceRole(input: CheckoutInput): Promise<CheckoutResult> {
   if (input.items.some((item) => !isStoredVariantId(item.variantId))) {
     return { success: false, error: "منتج غير موجود في السلة" };
@@ -121,44 +210,63 @@ async function processCheckoutWithServiceRole(input: CheckoutInput): Promise<Che
     return { success: false, error: "تعذر إتمام الطلب" };
   }
 
-  const { data: saved } = await supabase
-    .from("orders")
-    .select("total_piasters")
-    .eq("id", row.order_id)
-    .maybeSingle();
+  const [{ data: saved }, itemsResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        "subtotal_piasters, shipping_piasters, discount_piasters, total_piasters, payment_method, status, customer_name, customer_email, customer_phone, shipping_address"
+      )
+      .eq("id", row.order_id)
+      .maybeSingle(),
+    supabase
+      .from("order_items")
+      .select("variant_id, product_name, variant_sku, unit_price_piasters, quantity")
+      .eq("order_id", row.order_id),
+  ]);
 
   log("order.created", { orderId: row.order_id, orderNumber: row.order_number });
 
-  const { data: itemRows, error: itemsError } = await supabase
-    .from("order_items")
-    .select("product_name, quantity, unit_price_piasters")
-    .eq("order_id", row.order_id);
-
-  if (itemsError) {
+  const itemRows = itemsResult.error ? null : itemsResult.data;
+  if (itemsResult.error) {
     logWarn("order.items_unread", { orderId: row.order_id });
   }
 
-  const lines: OrderEmailLine[] = (itemRows ?? []).map((item) => ({
-    productName: item.product_name,
-    quantity: item.quantity,
-    lineTotalFormatted: formatMoney(item.unit_price_piasters * item.quantity),
-  }));
+  const imageByVariant = itemRows
+    ? await loadVariantImageUrls(
+        supabase,
+        itemRows.map((item) => item.variant_id)
+      )
+    : new Map<string, string>();
 
-  const totalFormatted = formatMoney(saved?.total_piasters ?? 0);
-  await sendOrderEmail("new-order-admin", {
-    orderNumber: row.order_number,
-    customerName: input.customerName,
-    customerEmail: input.customerEmail,
-    totalFormatted,
-    lines,
+  const lines: OrderEmailLine[] = (itemRows ?? []).map((item) => {
+    const imageUrl = imageByVariant.get(item.variant_id);
+    return {
+      productName: item.product_name,
+      sku: item.variant_sku,
+      quantity: item.quantity,
+      unitPriceFormatted: formatMoney(item.unit_price_piasters),
+      lineTotalFormatted: formatMoney(item.unit_price_piasters * item.quantity),
+      ...(imageUrl ? { imageUrl } : {}),
+    };
   });
-  await sendOrderEmail("order-confirmed-customer", {
+
+  const emailData: OrderEmailData = {
     orderNumber: row.order_number,
-    customerName: input.customerName,
-    customerEmail: input.customerEmail,
-    totalFormatted,
+    customerName: saved?.customer_name ?? input.customerName,
+    customerEmail: saved?.customer_email ?? input.customerEmail,
+    customerPhone: saved?.customer_phone ?? input.customerPhone,
+    shippingAddress: saved
+      ? shippingAddressFromJson(saved.shipping_address)
+      : addressFromParts(input),
+    paymentMethod: saved?.payment_method ?? input.paymentMethod,
+    status: saved?.status ?? "pending",
+    subtotalFormatted: formatMoney(saved?.subtotal_piasters ?? 0),
+    shippingFormatted: formatMoney(saved?.shipping_piasters ?? 0),
+    discountFormatted: formatMoney(saved?.discount_piasters ?? 0),
+    totalFormatted: formatMoney(saved?.total_piasters ?? 0),
     lines,
-  });
+  };
+  await deliverCheckoutEmails(emailData, row.order_id);
 
   return {
     success: true,
@@ -231,28 +339,31 @@ async function processMockCheckout(input: CheckoutInput): Promise<CheckoutResult
     }
   }
 
-  const totalFormatted = formatMoney(totals.totalPiasters);
   const lines: OrderEmailLine[] = itemValidation.lineItems.map((item) => ({
     productName: item.productName,
+    sku: item.variantSku,
     quantity: item.quantity,
+    unitPriceFormatted: formatMoney(item.unitPricePiasters),
     lineTotalFormatted: formatMoney(item.unitPricePiasters * item.quantity),
   }));
 
-  await sendOrderEmail("new-order-admin", {
-    orderNumber,
-    customerName: input.customerName,
-    customerEmail: input.customerEmail,
-    totalFormatted,
-    lines,
-  });
-
-  await sendOrderEmail("order-confirmed-customer", {
-    orderNumber,
-    customerName: input.customerName,
-    customerEmail: input.customerEmail,
-    totalFormatted,
-    lines,
-  });
+  await deliverCheckoutEmails(
+    {
+      orderNumber,
+      customerName: input.customerName,
+      customerEmail: input.customerEmail,
+      customerPhone: input.customerPhone,
+      shippingAddress: addressFromParts(input),
+      paymentMethod: input.paymentMethod,
+      status: "pending",
+      subtotalFormatted: formatMoney(totals.subtotalPiasters),
+      shippingFormatted: formatMoney(totals.shippingPiasters),
+      discountFormatted: formatMoney(totals.discountPiasters),
+      totalFormatted: formatMoney(totals.totalPiasters),
+      lines,
+    },
+    orderId
+  );
 
   return { success: true, orderId, orderNumber, accessToken };
 }
