@@ -6,7 +6,7 @@ type SendResult = {
   error: { message: string } | null;
 };
 
-const { sendMock } = vi.hoisted(() => ({
+const { sendMock, brandingMock } = vi.hoisted(() => ({
   sendMock: vi.fn(
     async (_payload: {
       from: string;
@@ -20,6 +20,7 @@ const { sendMock } = vi.hoisted(() => ({
       error: null,
     })
   ),
+  brandingMock: vi.fn(async () => ({ logoUrl: "" })),
 }));
 
 vi.mock("resend", () => ({
@@ -28,12 +29,19 @@ vi.mock("resend", () => ({
   },
 }));
 
+vi.mock("@/lib/store-settings", () => ({
+  getStorefrontBranding: brandingMock,
+}));
+
 import {
   buildOrderEmailHtml,
   parseAdminNotificationEmails,
   resolveEmailImageUrl,
+  resolveEmailLogoUrl,
   sendOrderEmail,
 } from "@/lib/email";
+
+const EMAIL_LOGO_FALLBACK = "https://eldawlystores.vercel.app/branding/doly-wordmark.svg";
 
 const orderMail = {
   orderNumber: "DOLY-1",
@@ -63,6 +71,8 @@ describe("sendOrderEmail", () => {
   beforeEach(() => {
     sendMock.mockClear();
     sendMock.mockResolvedValue({ data: { id: "email_test" }, error: null });
+    brandingMock.mockReset();
+    brandingMock.mockResolvedValue({ logoUrl: "" });
     process.env.RESEND_API_KEY = "test-key";
     process.env.RESEND_FROM_EMAIL = "sales@example.com";
   });
@@ -144,6 +154,67 @@ describe("sendOrderEmail", () => {
     expect(html).toContain("#a92222");
     expect(html).toContain('lang="ar"');
   });
+
+  it("puts the absolute store logo on the carbon receipt header", async () => {
+    brandingMock.mockResolvedValue({ logoUrl: "https://cdn.example/wordmark.svg" });
+    await sendOrderEmail("order-confirmed-customer", orderMail);
+    const html = sendMock.mock.calls[0]?.[0]?.html as string;
+    expect(html).toContain("#1a211e");
+    expect(html).toContain('src="https://cdn.example/wordmark.svg"');
+    expect(html).toContain('alt="Doly Stores"');
+    expect(html).toContain('width="148"');
+    expect(html).toContain("height:auto");
+    expect(html).toContain("max-height:40px");
+    expect(html).toContain('border="0"');
+    expect(html).toContain("display:block");
+    expect(html).toContain(">Doly Stores</div>");
+    expect(html).toContain("color:#ffffff");
+    expect(html).toContain('bgcolor="#a92222"');
+    expect(html).toContain('height="4"');
+    expect(html).not.toContain("#7d1414");
+    expect(html).not.toContain(EMAIL_LOGO_FALLBACK);
+    expect(sendMock.mock.calls[0]?.[0]?.subject).toBe("تأكيد طلبك #DOLY-1");
+  });
+
+  it("rejects a relative logo url and keeps the production wordmark", async () => {
+    process.env.ADMIN_NOTIFICATION_EMAIL = "one@example.com";
+    brandingMock.mockResolvedValue({ logoUrl: "/images/store-mark.png" });
+    await sendOrderEmail("new-order-admin", orderMail);
+    const html = sendMock.mock.calls[0]?.[0]?.html as string;
+    expect(html).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
+    expect(html).toContain('alt="Doly Stores"');
+    expect(html).not.toContain("/images/store-mark.png");
+    expect(html).not.toContain('src="/branding/doly-wordmark.svg"');
+    expect(sendMock.mock.calls[0]?.[0]?.subject).toBe("طلب جديد #DOLY-1");
+
+    brandingMock.mockResolvedValue({ logoUrl: "/branding/doly-wordmark.svg" });
+    sendMock.mockClear();
+    await sendOrderEmail("new-order-admin", orderMail);
+    const relativeHtml = sendMock.mock.calls[0]?.[0]?.html as string;
+    expect(relativeHtml).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
+    expect(relativeHtml).not.toContain('src="/branding/doly-wordmark.svg"');
+  });
+
+  it("uses the production wordmark when branding cannot be read", async () => {
+    brandingMock.mockRejectedValue(new Error("settings unavailable"));
+    const result = await sendOrderEmail("order-confirmed-customer", orderMail);
+    expect(result.status).toBe("sent");
+    const html = sendMock.mock.calls[0]?.[0]?.html as string;
+    expect(html).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
+    expect(html).toContain('alt="Doly Stores"');
+    expect(html).toContain(">Doly Stores</div>");
+  });
+
+  it("escapes an absolute svg logo and still shows the text fallback", async () => {
+    brandingMock.mockResolvedValue({ logoUrl: 'https://cdn.example/wordmark.svg?x="><script>' });
+    await sendOrderEmail("order-confirmed-customer", orderMail);
+    const html = sendMock.mock.calls[0]?.[0]?.html as string;
+    expect(html).toContain("<img");
+    expect(html).toContain("https://cdn.example/wordmark.svg?x=&quot;&gt;&lt;script&gt;");
+    expect(html).toContain('alt="Doly Stores"');
+    expect(html).toContain(">Doly Stores</div>");
+    expect(html).not.toContain("<script>");
+  });
 });
 
 describe("customer confirmation html", () => {
@@ -210,7 +281,8 @@ describe("customer confirmation html", () => {
       ],
     });
 
-    expect(payload.html.match(/<img\b/g)).toHaveLength(1);
+    expect(payload.html.match(/<img\b/g)).toHaveLength(2);
+    expect(payload.html).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
     expect(payload.html).toContain("https://cdn.example/phone.jpg");
     expect(payload.html).not.toContain("placeholder-product.svg");
     expect(payload.html).not.toContain("products/phone.jpg");
@@ -230,7 +302,7 @@ describe("customer confirmation html", () => {
         },
       ],
     });
-    expect(httpPayload.html.match(/<img\b/g)).toHaveLength(1);
+    expect(httpPayload.html.match(/<img\b/g)).toHaveLength(2);
 
     const hostile = buildOrderEmailHtml("order-confirmed-customer", {
       orderNumber: "DOLY-2",
@@ -299,10 +371,24 @@ describe("customer confirmation html", () => {
       status: "shipped",
     });
     expect(payload.html).not.toContain("<table");
+    expect(payload.html).not.toContain("#1a211e");
+    expect(payload.html).not.toContain(EMAIL_LOGO_FALLBACK);
     expect(payload.html).toContain("تم شحن طلبك #DOLY-1");
     expect(payload.html).toContain("الحالة: shipped");
     expect(payload.text).not.toContain("الدفع عند الاستلام");
     expect(payload.text).not.toContain("قيد الانتظار");
+  });
+});
+
+describe("resolveEmailLogoUrl", () => {
+  it("keeps an absolute http(s) logo and rejects relative values", () => {
+    expect(resolveEmailLogoUrl("https://cdn.example/wordmark.svg")).toBe("https://cdn.example/wordmark.svg");
+    expect(resolveEmailLogoUrl("http://cdn.example/wordmark.svg")).toBe("http://cdn.example/wordmark.svg");
+    expect(resolveEmailLogoUrl("  https://cdn.example/wordmark.svg  ")).toBe("https://cdn.example/wordmark.svg");
+    expect(resolveEmailLogoUrl("/branding/doly-wordmark.svg")).toBe(EMAIL_LOGO_FALLBACK);
+    expect(resolveEmailLogoUrl("/images/store-mark.png")).toBe(EMAIL_LOGO_FALLBACK);
+    expect(resolveEmailLogoUrl("")).toBe(EMAIL_LOGO_FALLBACK);
+    expect(resolveEmailLogoUrl(undefined)).toBe(EMAIL_LOGO_FALLBACK);
   });
 });
 

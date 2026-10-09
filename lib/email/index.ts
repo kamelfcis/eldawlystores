@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { log, logWarn } from "@/lib/logging";
 import { getPublicUrl } from "@/lib/storage";
+import { getStorefrontBranding } from "@/lib/store-settings";
 
 export type EmailTemplate =
   | "new-order-admin"
@@ -20,6 +21,7 @@ export interface EmailPayload {
 const ORDER_REPLY_TO = "sales@eldawlystores.shop";
 const RECEIPT_FONT = "Tahoma, 'Segoe UI', sans-serif";
 const RECEIPT_TEMPLATES = new Set<EmailTemplate>(["new-order-admin", "order-confirmed-customer"]);
+const EMAIL_LOGO_FALLBACK = "https://eldawlystores.vercel.app/branding/doly-wordmark.svg";
 
 export type EmailResult =
   | { status: "sent"; id: string }
@@ -124,6 +126,13 @@ function httpImageUrl(stored: string | null | undefined): string | undefined {
   const value = stored?.trim() ?? "";
   if (/^https?:\/\//i.test(value)) return value;
   return undefined;
+}
+
+/** Absolute http(s) logo URLs pass through. Relative values use the production wordmark. */
+export function resolveEmailLogoUrl(logoUrl: string | null | undefined): string {
+  const value = logoUrl?.trim() ?? "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return EMAIL_LOGO_FALLBACK;
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
@@ -283,10 +292,11 @@ function totalRow(label: string, value: string, emphasis: boolean): string {
   </tr>`;
 }
 
-function renderReceiptHtml(subject: string, data: OrderEmailContent): string {
+function renderReceiptHtml(subject: string, data: OrderEmailContent, logoUrl: string | null | undefined): string {
   const address = formatShippingAddress(data.shippingAddress);
   const payment = data.paymentMethod?.trim() ? paymentLabel(data.paymentMethod.trim()) : "";
   const status = data.status?.trim() ? statusLabel(data.status.trim()) : "";
+  const logoSrc = escapeHtml(resolveEmailLogoUrl(logoUrl));
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <body bgcolor="#f3eee6" style="margin:0;padding:0;background-color:#f3eee6;">
@@ -295,13 +305,14 @@ function renderReceiptHtml(subject: string, data: OrderEmailContent): string {
       <td align="center" style="padding:24px 12px;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" dir="rtl" style="width:600px;max-width:600px;background-color:#ffffff;">
           <tr>
-            <td bgcolor="#a92222" style="padding:22px 24px;font-family:${RECEIPT_FONT};background-color:#a92222;">
+            <td bgcolor="#1a211e" style="padding:22px 24px;font-family:${RECEIPT_FONT};background-color:#1a211e;">
+              <img src="${logoSrc}" alt="Doly Stores" width="148" border="0" style="display:block;width:148px;height:auto;max-height:40px;border:0;outline:none;text-decoration:none;" />
               <div style="font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;">Doly Stores</div>
               <div style="font-family:${RECEIPT_FONT};font-size:15px;line-height:1.5;color:#ffffff;padding-top:6px;">${escapeHtml(subject)}</div>
             </td>
           </tr>
           <tr>
-            <td bgcolor="#7d1414" height="4" style="height:4px;font-size:0;line-height:0;background-color:#7d1414;">&nbsp;</td>
+            <td bgcolor="#a92222" height="4" style="height:4px;font-size:0;line-height:0;background-color:#a92222;">&nbsp;</td>
           </tr>
           <tr>
             <td bgcolor="#ffffff" style="padding:20px 24px 0;font-family:${RECEIPT_FONT};font-size:15px;line-height:1.6;color:#1c1614;background-color:#ffffff;">مرحباً ${escapeHtml(data.customerName)}،</td>
@@ -393,7 +404,11 @@ function renderNoticeText(subject: string, data: OrderEmailContent): string {
     .join("\n");
 }
 
-export function buildOrderEmailHtml(template: EmailTemplate, data: OrderEmailContent): EmailPayload {
+export function buildOrderEmailHtml(
+  template: EmailTemplate,
+  data: OrderEmailContent,
+  logoUrl?: string | null
+): EmailPayload {
   const subjects: Record<EmailTemplate, string> = {
     "new-order-admin": `طلب جديد #${data.orderNumber}`,
     "order-confirmed-customer": `تأكيد طلبك #${data.orderNumber}`,
@@ -407,7 +422,7 @@ export function buildOrderEmailHtml(template: EmailTemplate, data: OrderEmailCon
   return {
     to: template === "new-order-admin" ? "" : data.customerName,
     subject,
-    html: receipt ? renderReceiptHtml(subject, data) : renderNoticeHtml(subject, data),
+    html: receipt ? renderReceiptHtml(subject, data, logoUrl) : renderNoticeHtml(subject, data),
     text: receipt ? renderReceiptText(subject, data) : renderNoticeText(subject, data),
     reply_to: ORDER_REPLY_TO,
   };
@@ -421,11 +436,21 @@ function summarizeResults(results: EmailResult[]): EmailResult {
   return results[results.length - 1] ?? { status: "not-configured" };
 }
 
+async function readEmailLogoUrl(template: EmailTemplate): Promise<string | undefined> {
+  if (!RECEIPT_TEMPLATES.has(template)) return undefined;
+  try {
+    const branding = await getStorefrontBranding();
+    return branding.logoUrl;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function sendOrderEmail(
   template: EmailTemplate,
   data: OrderEmailData
 ): Promise<EmailResult> {
-  const payload = buildOrderEmailHtml(template, data);
+  const payload = buildOrderEmailHtml(template, data, await readEmailLogoUrl(template));
   if (template === "new-order-admin") {
     const admins = parseAdminNotificationEmails(process.env.ADMIN_NOTIFICATION_EMAIL);
     if (admins.length === 0) {
