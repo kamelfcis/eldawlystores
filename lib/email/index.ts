@@ -12,7 +12,11 @@ export interface EmailPayload {
   to: string;
   subject: string;
   html: string;
+  text: string;
+  reply_to: string;
 }
+
+const ORDER_REPLY_TO = "sales@eldawlystores.shop";
 
 export type EmailResult =
   | { status: "sent"; id: string }
@@ -81,6 +85,8 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       to: payload.to,
       subject: payload.subject,
       html: payload.html,
+      text: payload.text,
+      replyTo: payload.reply_to,
     });
 
     if (result.error) {
@@ -97,15 +103,29 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   }
 }
 
+function lineQuantity(line: OrderEmailLine): number {
+  return Number.isFinite(line.quantity) ? Math.trunc(line.quantity) : 0;
+}
+
 function renderLineItems(lines: OrderEmailLine[] | undefined): string {
   if (!lines?.length) return "";
   const items = lines
-    .map((line) => {
-      const quantity = Number.isFinite(line.quantity) ? Math.trunc(line.quantity) : 0;
-      return `<li>${escapeHtml(line.productName)} — الكمية ${quantity} — ${escapeHtml(line.lineTotalFormatted)}</li>`;
-    })
+    .map(
+      (line) =>
+        `<li>${escapeHtml(line.productName)} — الكمية ${lineQuantity(line)} — ${escapeHtml(line.lineTotalFormatted)}</li>`
+    )
     .join("");
   return `<ul>${items}</ul>`;
+}
+
+function renderPlainLines(lines: OrderEmailLine[] | undefined): string {
+  if (!lines?.length) return "";
+  return lines
+    .map(
+      (line) =>
+        `${line.productName} — الكمية ${lineQuantity(line)} — ${line.lineTotalFormatted}`
+    )
+    .join("\n");
 }
 
 export function buildOrderEmailHtml(
@@ -130,9 +150,28 @@ export function buildOrderEmailHtml(
     <p>شكراً لتسوقك من Doly Stores</p>
   </div>`;
 
+  const plainLines = renderPlainLines(data.lines);
+  const text = [
+    subjects[template],
+    `مرحباً ${data.customerName}،`,
+    `رقم الطلب: ${data.orderNumber}`,
+    plainLines,
+    `إجمالي الطلب: ${data.totalFormatted}`,
+    data.status ? `الحالة: ${data.status}` : "",
+    "شكراً لتسوقك من Doly Stores",
+  ]
+    .filter((part) => part.length > 0)
+    .join("\n");
+
   const to = template === "new-order-admin" ? "" : data.customerName;
 
-  return { to, subject: subjects[template], html: body };
+  return {
+    to,
+    subject: subjects[template],
+    html: body,
+    text,
+    reply_to: ORDER_REPLY_TO,
+  };
 }
 
 function summarizeResults(results: EmailResult[]): EmailResult {

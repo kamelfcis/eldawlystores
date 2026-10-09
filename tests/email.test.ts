@@ -8,7 +8,14 @@ type SendResult = {
 
 const { sendMock } = vi.hoisted(() => ({
   sendMock: vi.fn(
-    async (_payload: { from: string; to: string; subject: string; html: string }): Promise<SendResult> => ({
+    async (_payload: {
+      from: string;
+      to: string;
+      subject: string;
+      html: string;
+      text: string;
+      replyTo: string;
+    }): Promise<SendResult> => ({
       data: { id: "email_test" },
       error: null,
     })
@@ -74,6 +81,8 @@ describe("sendOrderEmail", () => {
       "two@example.com",
     ]);
     expect(sendMock.mock.calls[0]?.[0]?.subject).toBe("طلب جديد #DOLY-1");
+    expect(sendMock.mock.calls[0]?.[0]?.replyTo).toBe("sales@eldawlystores.shop");
+    expect(sendMock.mock.calls[0]?.[0]?.text).toContain("طلب جديد #DOLY-1");
   });
 
   it("sends a repeated admin address once", async () => {
@@ -102,6 +111,19 @@ describe("sendOrderEmail", () => {
     expect(sendMock).toHaveBeenCalledTimes(2);
     expect(result).toEqual({ status: "failed", error: "rejected" });
   });
+
+  it("sends the customer confirmation with plain text and reply-to", async () => {
+    const result = await sendOrderEmail("order-confirmed-customer", orderMail);
+    expect(result.status).toBe("sent");
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const sent = sendMock.mock.calls[0]?.[0];
+    expect(sent?.to).toBe("shopper@example.com");
+    expect(sent?.subject).toBe("تأكيد طلبك #DOLY-1");
+    expect(sent?.html).toContain('dir="rtl"');
+    expect(sent?.text).toContain("تأكيد طلبك #DOLY-1");
+    expect(sent?.text).toContain(orderMail.totalFormatted);
+    expect(sent?.replyTo).toBe("sales@eldawlystores.shop");
+  });
 });
 
 describe("customer confirmation html", () => {
@@ -116,6 +138,7 @@ describe("customer confirmation html", () => {
     });
 
     expect(payload.subject).toBe("تأكيد طلبك #DOLY-9");
+    expect(payload.reply_to).toBe("sales@eldawlystores.shop");
     expect(payload.html).toContain('dir="rtl"');
     expect(payload.html).toContain("رقم الطلب: DOLY-9");
     expect(payload.html).toContain(totalFormatted);
@@ -124,5 +147,14 @@ describe("customer confirmation html", () => {
     expect(payload.html).toContain("&lt;script&gt;");
     expect(payload.html).toContain("هاتف &amp; &quot;جديد&quot;");
     expect(payload.html).not.toContain("<script>");
+    expect(payload.text).toContain("تأكيد طلبك #DOLY-9");
+    expect(payload.text).toContain("رقم الطلب: DOLY-9");
+    expect(payload.text).toContain(totalFormatted);
+    expect(payload.text).toContain(lineTotalFormatted);
+    expect(payload.text).toContain("الكمية 2");
+    expect(payload.text).toContain(`هاتف & "جديد"`);
+    expect(payload.text).toContain("أحمد <script>");
+    expect(payload.text).not.toContain("&amp;");
+    expect(payload.text).not.toContain("&lt;");
   });
 });
