@@ -3,8 +3,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { isServiceRoleConfigured } from "@/lib/supabase/service-role";
 import { calculateOrderTotals, formatMoney } from "@/lib/money";
 import { validatePromoCode, getShippingRate } from "@/lib/promotions";
-import { log } from "@/lib/logging";
-import { sendOrderEmail } from "@/lib/email";
+import { log, logWarn } from "@/lib/logging";
+import { sendOrderEmail, type OrderEmailLine } from "@/lib/email";
 import { getOrderStore } from "@/lib/orders";
 import type { Json } from "@/lib/types/database";
 import { isStoredVariantId } from "./variant-id";
@@ -129,18 +129,35 @@ async function processCheckoutWithServiceRole(input: CheckoutInput): Promise<Che
 
   log("order.created", { orderId: row.order_id, orderNumber: row.order_number });
 
+  const { data: itemRows, error: itemsError } = await supabase
+    .from("order_items")
+    .select("product_name, quantity, unit_price_piasters")
+    .eq("order_id", row.order_id);
+
+  if (itemsError) {
+    logWarn("order.items_unread", { orderId: row.order_id });
+  }
+
+  const lines: OrderEmailLine[] = (itemRows ?? []).map((item) => ({
+    productName: item.product_name,
+    quantity: item.quantity,
+    lineTotalFormatted: formatMoney(item.unit_price_piasters * item.quantity),
+  }));
+
   const totalFormatted = formatMoney(saved?.total_piasters ?? 0);
   await sendOrderEmail("new-order-admin", {
     orderNumber: row.order_number,
     customerName: input.customerName,
     customerEmail: input.customerEmail,
     totalFormatted,
+    lines,
   });
   await sendOrderEmail("order-confirmed-customer", {
     orderNumber: row.order_number,
     customerName: input.customerName,
     customerEmail: input.customerEmail,
     totalFormatted,
+    lines,
   });
 
   return {
@@ -215,12 +232,18 @@ async function processMockCheckout(input: CheckoutInput): Promise<CheckoutResult
   }
 
   const totalFormatted = formatMoney(totals.totalPiasters);
+  const lines: OrderEmailLine[] = itemValidation.lineItems.map((item) => ({
+    productName: item.productName,
+    quantity: item.quantity,
+    lineTotalFormatted: formatMoney(item.unitPricePiasters * item.quantity),
+  }));
 
   await sendOrderEmail("new-order-admin", {
     orderNumber,
     customerName: input.customerName,
     customerEmail: input.customerEmail,
     totalFormatted,
+    lines,
   });
 
   await sendOrderEmail("order-confirmed-customer", {
@@ -228,6 +251,7 @@ async function processMockCheckout(input: CheckoutInput): Promise<CheckoutResult
     customerName: input.customerName,
     customerEmail: input.customerEmail,
     totalFormatted,
+    lines,
   });
 
   return { success: true, orderId, orderNumber, accessToken };
