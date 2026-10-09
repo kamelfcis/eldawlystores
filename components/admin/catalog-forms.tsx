@@ -394,7 +394,7 @@ export function BannerForm({
       ? "المقاس: 1600×900 لشرائح الوسط"
       : type === "offer"
         ? "المقاس: 800×1000 للبطاقة اليسرى والبطاقة اليمنى"
-        : "اختياري. الرسالة تظهر في شريط أعلى الصفحة";
+        : "اختياري. ارتفاع الصورة 36px داخل شريط 48px، object-contain. ارفع حوالي 144×144 أو شعار قصير حوالي 240×96";
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {banner ? <input type="hidden" name="id" value={banner.id} /> : null}

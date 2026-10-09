@@ -1,4 +1,6 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { announcementGradientCss, type StorefrontBranding } from "@/lib/store-branding";
 
@@ -17,6 +19,22 @@ function widen(items: AnnouncementMessage[]) {
   return widened;
 }
 
+function AnnouncementChip({ src }: { src: string }) {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+  return (
+    <span className="inline-flex shrink-0 items-center rounded-[4px] bg-paper-white p-0.5">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        className="block h-9 w-auto max-w-[72px] object-contain"
+        onError={() => setHidden(true)}
+      />
+    </span>
+  );
+}
+
 function AdsSequence({
   items,
   clone = false,
@@ -25,19 +43,18 @@ function AdsSequence({
   clone?: boolean;
 }) {
   return (
-    <div className="flex shrink-0 items-center" data-ads-clone={clone ? "" : undefined} aria-hidden={clone || undefined}>
+    <div className="flex h-12 max-h-12 shrink-0 items-center" data-ads-clone={clone ? "" : undefined} aria-hidden={clone || undefined}>
       {items.map((item, index) => {
-        const className = "inline-flex items-center gap-2 whitespace-nowrap px-8 text-[14px] font-bold tracking-[0.038em] text-paper-white";
+        const className = "inline-flex h-12 max-h-12 items-center gap-2 whitespace-nowrap px-8 text-[14px] font-bold tracking-[0.038em] text-paper-white";
+        const image = item.imageUrl?.trim() ?? "";
         const body = (
           <>
-            {item.imageUrl ? (
-              <Image src={item.imageUrl} alt="" width={28} height={28} className="h-7 w-7 rounded-[4px] object-cover" />
-            ) : null}
+            {image ? <AnnouncementChip src={image} /> : null}
             {item.title}
           </>
         );
         return (
-          <span key={`${item.title}-${index}`} className="inline-flex items-center">
+          <span key={`${item.title}-${index}`} className="inline-flex h-12 max-h-12 items-center">
             {item.href ? (
               <Link href={item.href} tabIndex={clone ? -1 : undefined} className={className}>
                 {body}
@@ -45,6 +62,7 @@ function AdsSequence({
             ) : (
               <span className={className}>{body}</span>
             )}
+            <span aria-hidden className="h-3 w-px shrink-0 bg-paper-white" />
           </span>
         );
       })}
@@ -65,7 +83,10 @@ export function AnnouncementBar({
 
   if (items.length === 0) {
     return (
-      <div className="relative flex h-8 items-center justify-center px-4 text-center text-[14px] font-bold tracking-[0.038em] text-paper-white" style={paint}>
+      <div
+        className="ads-bar relative flex h-12 max-h-12 items-center justify-center overflow-hidden px-4 text-center text-[14px] font-bold tracking-[0.038em] text-paper-white"
+        style={paint}
+      >
         <p className="relative z-[1]">{FALLBACK}</p>
         <span className="ads-bar-sheen" aria-hidden />
       </div>
@@ -74,13 +95,13 @@ export function AnnouncementBar({
 
   return (
     <div
-      className={staticBar ? "ads-bar ads-bar--static h-8 overflow-hidden text-paper-white" : "ads-bar h-8 overflow-hidden text-paper-white"}
+      className={staticBar ? "ads-bar ads-bar--static h-12 max-h-12 overflow-hidden text-paper-white" : "ads-bar h-12 max-h-12 overflow-hidden text-paper-white"}
       dir="rtl"
       role="region"
       aria-label="إعلانات"
       style={paint}
     >
-      <div className="ads-track relative z-[1] h-full items-center">
+      <div className="ads-track relative z-[1] h-12 max-h-12 items-center">
         <AdsSequence items={items} />
         <AdsSequence items={items} clone />
       </div>
