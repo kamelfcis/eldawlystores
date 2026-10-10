@@ -1,19 +1,26 @@
+import { poundsToPiasters } from "@/lib/money";
+
 export type ShippingBand = "all" | "cairo" | "alex" | "rest" | "range";
 
 export const SHIPPING_BANDS: Array<{ id: ShippingBand; label: string }> = [
   { id: "all", label: "الكل" },
-  { id: "cairo", label: "القاهرة/الجيزة (5000)" },
-  { id: "alex", label: "الإسكندرية/القليوبية (7000)" },
-  { id: "rest", label: "باقي المحافظات (8000)" },
-  { id: "range", label: "نطاق قرش" },
+  { id: "cairo", label: "القاهرة/الجيزة (50 ج.م)" },
+  { id: "alex", label: "الإسكندرية/القليوبية (70 ج.م)" },
+  { id: "rest", label: "باقي المحافظات (80 ج.م)" },
+  { id: "range", label: "نطاق بالجنيه" },
 ];
 
 type ShippingFilterInput = {
   query: string;
   band: ShippingBand;
-  minPiasters: string;
-  maxPiasters: string;
+  minPounds: string;
+  maxPounds: string;
 };
+
+export function poundsRangeToPiasters(value: string): number | null {
+  if (!/^\d+$/.test(value)) return null;
+  return poundsToPiasters(Number(value));
+}
 
 export function shippingFiltersActive({ query, band }: ShippingFilterInput): boolean {
   return Boolean(query.trim()) || band !== "all";
@@ -21,12 +28,12 @@ export function shippingFiltersActive({ query, band }: ShippingFilterInput): boo
 
 export function filterShippingRates<T extends { governorate: string; rate_piasters: number }>(
   rates: readonly T[],
-  { query, band, minPiasters, maxPiasters }: ShippingFilterInput
+  { query, band, minPounds, maxPounds }: ShippingFilterInput
 ): T[] {
   const needle = query.trim().toLowerCase();
   const applyRange = band === "range";
-  const min = applyRange && /^\d+$/.test(minPiasters) ? Number(minPiasters) : null;
-  const max = applyRange && /^\d+$/.test(maxPiasters) ? Number(maxPiasters) : null;
+  const min = applyRange ? poundsRangeToPiasters(minPounds) : null;
+  const max = applyRange ? poundsRangeToPiasters(maxPounds) : null;
 
   return rates.filter((rate) => {
     if (needle && !rate.governorate.toLowerCase().includes(needle)) return false;

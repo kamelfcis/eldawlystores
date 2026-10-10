@@ -11,6 +11,7 @@ import { assertAdmin } from "@/lib/auth";
 import { updateAdminOrderStatus } from "@/lib/orders";
 import { createClient } from "@/lib/supabase/server";
 import { serializeStorefrontBranding, STOREFRONT_BRANDING_KEY } from "@/lib/store-branding";
+import { poundsToPiasters } from "@/lib/money";
 import { normalizeEgyptianMobile } from "@/lib/store-settings";
 import type { BannerType, Json, OrderStatus, ProductStatus } from "@/lib/types/database";
 
@@ -45,6 +46,15 @@ function readInt(value: string): number | null {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed)) return null;
   return parsed;
+}
+
+function readPoundsToPiasters(value: string): number | null {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(value)) return null;
+  const pounds = Number(value);
+  if (!Number.isFinite(pounds) || pounds < 0) return null;
+  const piasters = poundsToPiasters(pounds);
+  if (!Number.isSafeInteger(piasters)) return null;
+  return piasters;
 }
 
 function isUuid(value: string): boolean {
@@ -674,9 +684,9 @@ export async function saveShippingRate(_prev: FormState, formData: FormData): Pr
   const supabase = await adminClient();
   const id = readString(formData, "id");
   const governorate = readString(formData, "governorate");
-  const rate = readInt(readString(formData, "rate_piasters"));
+  const rate = readPoundsToPiasters(readString(formData, "rate_pounds"));
   if (governorate.length < 2) return { error: "اسم المحافظة مطلوب", saved: false, notice: null };
-  if (rate == null) return { error: "رسوم الشحن بالقرش يجب أن تكون رقماً صحيحاً", saved: false, notice: null };
+  if (rate == null) return { error: "رسوم الشحن بالجنيه يجب أن تكون رقماً صحيحاً", saved: false, notice: null };
 
   if (id) {
     if (!isUuid(id)) return { error: "سعر الشحن غير موجود", saved: false, notice: null };

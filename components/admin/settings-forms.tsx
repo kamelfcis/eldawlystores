@@ -16,7 +16,7 @@ import {
 } from "@/lib/admin/notification-emails";
 import type { AdminShippingRate } from "@/lib/admin/queries";
 import { SHIPPING_BANDS, filterShippingRates, shippingFiltersActive, type ShippingBand } from "@/lib/admin/shipping-filters";
-import { formatMoney } from "@/lib/money";
+import { piastersToPounds } from "@/lib/money";
 import { LoadingButton } from "@/components/loading/loading-button";
 import { Input } from "@/components/ui/input";
 import { Field, FormNote, initialFormState } from "./form-bits";
@@ -50,6 +50,13 @@ export function AdminNotificationEmailsForm({
   const [draft, setDraft] = useState("");
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const isDirty = useMemo(() => {
+    if (list.length !== inboxes.length) return true;
+    return list.some((inbox, index) => {
+      const original = inboxes[index];
+      return !original || original.email !== inbox.email || original.enabled !== inbox.enabled;
+    });
+  }, [inboxes, list]);
 
   function addAddress() {
     const trimmed = draft.trim();
@@ -97,18 +104,28 @@ export function AdminNotificationEmailsForm({
                 {inbox.email}
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={inbox.enabled}
-                  className={`inline-flex h-10 items-center rounded-[4px] border px-3 text-[14px] font-bold tracking-[0.038em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink ${
+                <span
+                  className={`inline-flex min-h-6 items-center rounded-full border px-2 text-[12px] ${
                     inbox.enabled
                       ? "border-carbon-ink bg-carbon-ink text-paper-white"
                       : "border-ash-border bg-paper-white text-graphite"
                   }`}
+                >
+                  {inbox.enabled ? "مفعّل" : "معطّل"}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={inbox.enabled}
+                  aria-label={`إرسال إشعارات الطلبات إلى ${inbox.email}`}
+                  title={inbox.enabled ? "إيقاف الإرسال" : "تفعيل الإرسال"}
+                  className={`inline-flex h-10 min-h-10 w-12 shrink-0 items-center rounded-full border px-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink ${
+                    inbox.enabled ? "justify-end border-carbon-ink bg-carbon-ink" : "justify-start border-ash-border bg-fog"
+                  }`}
                   onClick={() => toggleEnabled(inbox.email)}
                 >
-                  {inbox.enabled ? "تفعيل" : "إيقاف"}
+                  <span className="sr-only">{inbox.enabled ? "إيقاف الإرسال" : "تفعيل الإرسال"}</span>
+                  <span className="block size-7 rounded-full bg-paper-white" />
                 </button>
                 {pendingRemove === inbox.email ? (
                   <>
@@ -145,6 +162,12 @@ export function AdminNotificationEmailsForm({
           ))}
         </ul>
       )}
+      {list.length > 0 ? (
+        <p className="text-[14px] text-graphite">المفعّل يستقبل إشعار الطلب الجديد</p>
+      ) : null}
+      {isDirty ? (
+        <p className="text-[14px] text-carbon-ink">التغييرات غير محفوظة — اضغط حفظ القائمة</p>
+      ) : null}
       <Field label="بريد إلكتروني">
         <Input
           type="email"
@@ -177,14 +200,14 @@ const shippingColumns = "lg:grid-cols-[1.4fr_1fr_auto]";
 export function ShippingRatesPanel({ rates }: { rates: AdminShippingRate[] }) {
   const [query, setQuery] = useState("");
   const [band, setBand] = useState<ShippingBand>("all");
-  const [minPiasters, setMinPiasters] = useState("");
-  const [maxPiasters, setMaxPiasters] = useState("");
+  const [minPounds, setMinPounds] = useState("");
+  const [maxPounds, setMaxPounds] = useState("");
 
   const filtered = useMemo(
-    () => filterShippingRates(rates, { query, band, minPiasters, maxPiasters }),
-    [band, maxPiasters, minPiasters, query, rates]
+    () => filterShippingRates(rates, { query, band, minPounds, maxPounds }),
+    [band, maxPounds, minPounds, query, rates]
   );
-  const filtersActive = shippingFiltersActive({ query, band, minPiasters, maxPiasters });
+  const filtersActive = shippingFiltersActive({ query, band, minPounds, maxPounds });
 
   return (
     <div className="space-y-4">
@@ -194,11 +217,21 @@ export function ShippingRatesPanel({ rates }: { rates: AdminShippingRate[] }) {
         </Field>
         {band === "range" ? (
           <div className="grid grid-cols-2 gap-3">
-            <Field label="حد أدنى (قرش)">
-              <Input inputMode="numeric" value={minPiasters} onChange={(event) => setMinPiasters(event.target.value)} />
+            <Field label="حد أدنى (ج.م)">
+              <Input
+                dir="ltr"
+                inputMode="numeric"
+                value={minPounds}
+                onChange={(event) => setMinPounds(event.target.value)}
+              />
             </Field>
-            <Field label="حد أقصى (قرش)">
-              <Input inputMode="numeric" value={maxPiasters} onChange={(event) => setMaxPiasters(event.target.value)} />
+            <Field label="حد أقصى (ج.م)">
+              <Input
+                dir="ltr"
+                inputMode="numeric"
+                value={maxPounds}
+                onChange={(event) => setMaxPounds(event.target.value)}
+              />
             </Field>
           </div>
         ) : null}
@@ -228,8 +261,8 @@ export function ShippingRatesPanel({ rates }: { rates: AdminShippingRate[] }) {
               onClick={() => {
                 setQuery("");
                 setBand("all");
-                setMinPiasters("");
-                setMaxPiasters("");
+                setMinPounds("");
+                setMaxPounds("");
               }}
             >
               مسح التصفية
@@ -271,8 +304,21 @@ export function ShippingRateForm({
   ratePiasters?: number;
 }) {
   const [state, action] = useActionState(saveShippingRate, initialFormState);
-  const [rate, setRate] = useState(ratePiasters == null ? "" : String(ratePiasters));
-  const parsed = /^\d+$/.test(rate) ? Number(rate) : null;
+  const [rate, setRate] = useState(ratePiasters == null ? "" : String(piastersToPounds(ratePiasters)));
+
+  const rateField = (
+    <div className="flex items-center gap-2">
+      <Input
+        name="rate_pounds"
+        dir="ltr"
+        inputMode="decimal"
+        value={rate}
+        onChange={(event) => setRate(event.target.value)}
+        required
+      />
+      <span className="shrink-0 text-[14px] text-graphite">ج.م</span>
+    </div>
+  );
 
   const fields = (
     <>
@@ -288,27 +334,10 @@ export function ShippingRateForm({
       )}
       {id ? (
         <AdminListCell label="الرسوم">
-          <div className="space-y-1">
-            <Input
-              name="rate_piasters"
-              inputMode="numeric"
-              value={rate}
-              onChange={(event) => setRate(event.target.value)}
-              required
-            />
-            <p className="text-[14px] text-graphite">{parsed == null ? "—" : formatMoney(parsed)}</p>
-          </div>
+          {rateField}
         </AdminListCell>
       ) : (
-        <Field label="الرسوم (قرش)">
-          <Input
-            name="rate_piasters"
-            inputMode="numeric"
-            value={rate}
-            onChange={(event) => setRate(event.target.value)}
-            required
-          />
-        </Field>
+        <Field label="الرسوم (ج.م)">{rateField}</Field>
       )}
       {id ? (
         <AdminListCell label="حفظ">
@@ -321,7 +350,6 @@ export function ShippingRateForm({
         </AdminListCell>
       ) : (
         <div className="flex items-center gap-3 pb-1">
-          <span className="text-[14px] text-graphite">{parsed == null ? "—" : formatMoney(parsed)}</span>
           <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
             إضافة
           </LoadingButton>

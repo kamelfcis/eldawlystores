@@ -19,6 +19,11 @@ describe("money", () => {
     expect(poundsToPiasters(100)).toBe(10000);
   });
 
+  it("converts 80 pounds to 8000 piasters and back", () => {
+    expect(poundsToPiasters(80)).toBe(8000);
+    expect(piastersToPounds(8000)).toBe(80);
+  });
+
   it("converts piasters to pounds", () => {
     expect(piastersToPounds(10000)).toBe(100);
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseAdminSettingsTab } from "@/lib/admin/settings-tabs";
-import { filterShippingRates, shippingFiltersActive } from "@/lib/admin/shipping-filters";
+import { filterShippingRates, poundsRangeToPiasters, shippingFiltersActive, SHIPPING_BANDS } from "@/lib/admin/shipping-filters";
 
 const rates = [
   { id: "1", governorate: "القاهرة", rate_piasters: 5000 },
@@ -26,50 +26,84 @@ describe("filterShippingRates", () => {
     const filtered = filterShippingRates(rates, {
       query: "  القاهرة  ",
       band: "all",
-      minPiasters: "1",
-      maxPiasters: "2",
+      minPounds: "1",
+      maxPounds: "2",
     });
     expect(filtered.map((rate) => rate.governorate)).toEqual(["القاهرة"]);
   });
 
-  it("does not apply a hidden piaster range to other bands", () => {
+  it("does not apply a hidden pound range to other bands", () => {
     const filtered = filterShippingRates(rates, {
       query: "",
       band: "cairo",
-      minPiasters: "8000",
-      maxPiasters: "9000",
+      minPounds: "80",
+      maxPounds: "90",
     });
     expect(filtered.map((rate) => rate.governorate)).toEqual(["القاهرة", "الجيزة"]);
+    expect(filtered.every((rate) => rate.rate_piasters === 5000)).toBe(true);
   });
 
-  it("applies min/max only for the range band", () => {
+  it("applies min/max only for the range band and converts pounds to piasters", () => {
     const filtered = filterShippingRates(rates, {
       query: "",
       band: "range",
-      minPiasters: "7000",
-      maxPiasters: "7000",
+      minPounds: "70",
+      maxPounds: "70",
     });
     expect(filtered.map((rate) => rate.rate_piasters)).toEqual([7000, 7000]);
+  });
+
+  it("converts a 50-pound range to 5000 piasters", () => {
+    expect(poundsRangeToPiasters("50")).toBe(5000);
+    const filtered = filterShippingRates(rates, {
+      query: "",
+      band: "range",
+      minPounds: "50",
+      maxPounds: "50",
+    });
+    expect(filtered.map((rate) => rate.rate_piasters)).toEqual([5000, 5000]);
+  });
+
+  it("keeps preset bands on stored piaster values", () => {
+    expect(
+      filterShippingRates(rates, { query: "", band: "cairo", minPounds: "", maxPounds: "" }).map((rate) => rate.rate_piasters)
+    ).toEqual([5000, 5000]);
+    expect(
+      filterShippingRates(rates, { query: "", band: "alex", minPounds: "", maxPounds: "" }).map((rate) => rate.rate_piasters)
+    ).toEqual([7000, 7000]);
+    expect(
+      filterShippingRates(rates, { query: "", band: "rest", minPounds: "", maxPounds: "" }).map((rate) => rate.rate_piasters)
+    ).toEqual([8000]);
   });
 
   it("filters the rest-of-country band at 8000", () => {
     const filtered = filterShippingRates(rates, {
       query: "",
       band: "rest",
-      minPiasters: "",
-      maxPiasters: "",
+      minPounds: "",
+      maxPounds: "",
     });
     expect(filtered.map((rate) => rate.governorate)).toEqual(["أسوان"]);
+  });
+
+  it("shows pound labels without piasters", () => {
+    expect(SHIPPING_BANDS.map((band) => band.label)).toEqual([
+      "الكل",
+      "القاهرة/الجيزة (50 ج.م)",
+      "الإسكندرية/القليوبية (70 ج.م)",
+      "باقي المحافظات (80 ج.م)",
+      "نطاق بالجنيه",
+    ]);
   });
 });
 
 describe("shippingFiltersActive", () => {
   it("is inactive on the default all-band empty search", () => {
-    expect(shippingFiltersActive({ query: "  ", band: "all", minPiasters: "1", maxPiasters: "9" })).toBe(false);
+    expect(shippingFiltersActive({ query: "  ", band: "all", minPounds: "1", maxPounds: "9" })).toBe(false);
   });
 
   it("is active for search or a non-all band", () => {
-    expect(shippingFiltersActive({ query: "أسوان", band: "all", minPiasters: "", maxPiasters: "" })).toBe(true);
-    expect(shippingFiltersActive({ query: "", band: "range", minPiasters: "", maxPiasters: "" })).toBe(true);
+    expect(shippingFiltersActive({ query: "أسوان", band: "all", minPounds: "", maxPounds: "" })).toBe(true);
+    expect(shippingFiltersActive({ query: "", band: "range", minPounds: "", maxPounds: "" })).toBe(true);
   });
 });

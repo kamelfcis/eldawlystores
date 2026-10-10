@@ -233,6 +233,10 @@ describe("resolveAdminNotificationEmails", () => {
 
   it("still sends a legacy string array as all enabled", () => {
     const inboxes = parseStoredAdminNotificationInboxes(["legacy@example.com", "ops@example.com"]);
+    expect(inboxes).toEqual([
+      { email: "legacy@example.com", enabled: true },
+      { email: "ops@example.com", enabled: true },
+    ]);
     expect(resolveAdminNotificationEmails({ state: "saved", inboxes }, "env@example.com")).toEqual({
       emails: ["legacy@example.com", "ops@example.com"],
       unavailable: false,

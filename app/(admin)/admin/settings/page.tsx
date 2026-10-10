@@ -75,7 +75,7 @@ export default async function AdminSettingsPage({
       {tab === "shipping" ? (
         <section className="space-y-4 rounded-[8px] border border-mist bg-paper-white p-4">
           <h2 className="text-[14px] font-bold tracking-[0.038em]">رسوم الشحن</h2>
-          <p className="text-[14px] text-graphite">المبلغ بالقرش، وبجانبه القيمة بالجنيه. الطلب التالي يستخدم السعر المحفوظ.</p>
+          <p className="text-[14px] text-graphite">المبلغ بالجنيه. الطلب التالي يستخدم السعر المحفوظ.</p>
           <ShippingRatesPanel rates={rates} />
         </section>
       ) : null}
