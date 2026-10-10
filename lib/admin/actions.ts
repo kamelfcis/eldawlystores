@@ -12,6 +12,7 @@ import { updateAdminOrderStatus } from "@/lib/orders";
 import { createClient } from "@/lib/supabase/server";
 import { serializeStorefrontBranding, STOREFRONT_BRANDING_KEY } from "@/lib/store-branding";
 import { poundsToPiasters } from "@/lib/money";
+import { readPromotion } from "@/lib/admin/promotion-fields";
 import { normalizeEgyptianMobile } from "@/lib/store-settings";
 import type { BannerType, Json, OrderStatus, ProductStatus } from "@/lib/types/database";
 
@@ -402,44 +403,6 @@ export async function deleteBrand(_prev: FormState, formData: FormData): Promise
   if (error) return { error: dbMessage(error), saved: false, notice: null };
   revalidateCatalog();
   return { error: null, saved: true, notice: null };
-}
-
-function readPromotion(formData: FormData):
-  | { ok: false; error: string }
-  | {
-      ok: true;
-      code: string;
-      discountType: "percentage" | "fixed";
-      discountValue: number;
-      minOrder: number;
-      maxUses: number | null;
-      isActive: boolean;
-      expiresAt: string | null;
-    } {
-  const code = readString(formData, "code").toUpperCase();
-  const discountType = readString(formData, "discount_type");
-  const discountValue = readInt(readString(formData, "discount_value"));
-  const minOrder = readInt(readString(formData, "min_order_piasters") || "0");
-  const maxUsesRaw = readString(formData, "max_uses");
-  const maxUses = maxUsesRaw === "" ? null : readInt(maxUsesRaw);
-  const isActive = formData.get("is_active") === "on" || formData.get("is_active") === "true";
-  const expiresRaw = readString(formData, "expires_at");
-
-  if (code.length < 2 || code.length > 40 || /\s/.test(code)) return { ok: false, error: "كود العرض غير صالح" };
-  if (discountType !== "percentage" && discountType !== "fixed") return { ok: false, error: "نوع الخصم غير صالح" };
-  if (discountValue == null || discountValue <= 0) return { ok: false, error: "قيمة الخصم يجب أن تكون أكبر من صفر" };
-  if (discountType === "percentage" && discountValue > 100) return { ok: false, error: "النسبة يجب ألا تتجاوز 100" };
-  if (minOrder == null) return { ok: false, error: "الحد الأدنى غير صالح" };
-  if (maxUsesRaw !== "" && (maxUses == null || maxUses <= 0)) return { ok: false, error: "الحد الأقصى للاستخدام غير صالح" };
-
-  let expiresAt: string | null = null;
-  if (expiresRaw) {
-    const parsed = new Date(expiresRaw);
-    if (Number.isNaN(parsed.getTime())) return { ok: false, error: "تاريخ الانتهاء غير صالح" };
-    expiresAt = parsed.toISOString();
-  }
-
-  return { ok: true, code, discountType, discountValue, minOrder, maxUses, isActive, expiresAt };
 }
 
 export async function savePromotion(_prev: FormState, formData: FormData): Promise<FormState> {

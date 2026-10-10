@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ import {
   savePromotion,
   type FormState,
 } from "@/lib/admin/actions";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, piastersToPounds } from "@/lib/money";
 import type { BannerType, ProductStatus } from "@/lib/types/database";
 import { ImageUrlField } from "./image-url-field";
 import { ConfirmButton, Field, FormNote, initialFormState, selectClass } from "./form-bits";
@@ -291,43 +291,134 @@ function toLocalInput(iso: string | null): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+function poundsInputValue(piasters: number | undefined): string {
+  if (piasters == null || piasters === 0) return "";
+  return String(piastersToPounds(piasters));
+}
+
 export function PromotionForm({ promotion }: { promotion?: PromotionValues }) {
   const [state, action] = useActionState(savePromotion, initialFormState);
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">(promotion?.discount_type ?? "percentage");
+  const [percentValue, setPercentValue] = useState(
+    promotion?.discount_type === "percentage" ? String(promotion.discount_value) : ""
+  );
+  const [fixedValue, setFixedValue] = useState(
+    promotion?.discount_type === "fixed" ? poundsInputValue(promotion.discount_value) : ""
+  );
+  const [active, setActive] = useState(promotion?.is_active ?? true);
+  const [expiresAt, setExpiresAt] = useState(toLocalInput(promotion?.expires_at ?? null));
+  const expiryPast = Boolean(expiresAt && !Number.isNaN(new Date(expiresAt).getTime()) && new Date(expiresAt) < new Date());
+
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2">
-      {promotion ? <input type="hidden" name="id" value={promotion.id} /> : null}
-      <Field label="الكود">
-        <Input name="code" className="font-mono" defaultValue={promotion?.code} required />
-      </Field>
-      <Field label="النوع">
-        <select name="discount_type" defaultValue={promotion?.discount_type ?? "percentage"} className={selectClass}>
-          <option value="percentage">نسبة</option>
-          <option value="fixed">ثابت</option>
-        </select>
-      </Field>
-      <Field label="القيمة (نسبة أو قرش)">
-        <Input name="discount_value" type="number" min={1} step={1} defaultValue={promotion?.discount_value} required />
-      </Field>
-      <Field label="الحد الأدنى للطلب (قرش)">
-        <Input name="min_order_piasters" type="number" min={0} step={1} defaultValue={promotion?.min_order_piasters ?? 0} />
-      </Field>
-      <Field label="الحد الأقصى للاستخدام">
-        <Input name="max_uses" type="number" min={1} step={1} defaultValue={promotion?.max_uses ?? ""} placeholder="بدون حد" />
-      </Field>
-      <Field label="ينتهي في">
-        <Input name="expires_at" type="datetime-local" defaultValue={toLocalInput(promotion?.expires_at ?? null)} />
-      </Field>
-      <label className="flex items-center gap-2 text-[14px]">
-        <input type="checkbox" name="is_active" defaultChecked={promotion?.is_active ?? true} />
-        نشط
-      </label>
-      <div className="flex items-center gap-3 sm:col-span-2">
-        <LoadingButton type="submit" pendingLabel={promotion ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
-          {promotion ? "حفظ العرض" : "إضافة عرض"}
-        </LoadingButton>
-        <FormNote state={state} />
-      </div>
-    </form>
+    <div>
+      <h2 className="mb-1 text-[14px] font-bold tracking-[0.038em] text-carbon-ink">
+        {promotion ? "تعديل العرض" : "عرض جديد"}
+      </h2>
+      <p className="mb-3 text-[14px] text-graphite">حدد الكود والنوع والحدود. اكتب المبالغ بالجنيه.</p>
+      <form action={action} className="grid gap-3 sm:grid-cols-2">
+        {promotion ? <input type="hidden" name="id" value={promotion.id} /> : null}
+        <Field label="الكود">
+          <Input name="code" dir="ltr" lang="en" className="font-mono" defaultValue={promotion?.code} required />
+        </Field>
+        <Field label="النوع">
+          <select
+            name="discount_type"
+            value={discountType}
+            onChange={(event) => setDiscountType(event.target.value === "fixed" ? "fixed" : "percentage")}
+            className={selectClass}
+          >
+            <option value="percentage">نسبة</option>
+            <option value="fixed">خصم ثابت (ج.م)</option>
+          </select>
+        </Field>
+        {discountType === "percentage" ? (
+          <Field label="القيمة (%)">
+            <Input
+              name="discount_value"
+              dir="ltr"
+              lang="en"
+              inputMode="numeric"
+              value={percentValue}
+              onChange={(event) => setPercentValue(event.target.value)}
+              required
+            />
+          </Field>
+        ) : (
+          <Field label="قيمة الخصم (ج.م)">
+            <div className="flex items-center gap-2">
+              <Input
+                name="discount_value"
+                dir="ltr"
+                lang="en"
+                inputMode="decimal"
+                value={fixedValue}
+                onChange={(event) => setFixedValue(event.target.value)}
+                required
+              />
+              <span className="shrink-0 text-[14px] text-graphite">ج.م</span>
+            </div>
+          </Field>
+        )}
+        <Field label="الحد الأدنى للطلب (ج.م)">
+          <div className="flex items-center gap-2">
+            <Input
+              name="min_order_pounds"
+              dir="ltr"
+              lang="en"
+              inputMode="decimal"
+              defaultValue={poundsInputValue(promotion?.min_order_piasters)}
+            />
+            <span className="shrink-0 text-[14px] text-graphite">ج.م</span>
+          </div>
+        </Field>
+        <Field label="الحد الأقصى للاستخدام">
+          <Input name="max_uses" dir="ltr" lang="en" inputMode="numeric" defaultValue={promotion?.max_uses ?? ""} placeholder="بدون حد" />
+        </Field>
+        <Field label="ينتهي في">
+          <Input
+            name="expires_at"
+            type="datetime-local"
+            dir="ltr"
+            lang="en"
+            value={expiresAt}
+            onChange={(event) => setExpiresAt(event.target.value)}
+          />
+          {expiryPast ? <span className="block text-[12px] text-graphite">هذا التاريخ في الماضي. العرض سيظهر كمنتهٍ.</span> : null}
+        </Field>
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+          <span
+            className={`inline-flex min-h-6 items-center rounded-full border px-2 text-[12px] ${
+              active
+                ? "border-carbon-ink bg-carbon-ink text-paper-white"
+                : "border-ash-border bg-paper-white text-graphite"
+            }`}
+          >
+            {active ? "مفعّل" : "معطّل"}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={active}
+            aria-label="تفعيل العرض"
+            title={active ? "إيقاف العرض" : "تفعيل العرض"}
+            className={`inline-flex h-10 min-h-10 w-12 shrink-0 items-center rounded-full border px-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink ${
+              active ? "justify-end border-carbon-ink bg-carbon-ink" : "justify-start border-ash-border bg-fog"
+            }`}
+            onClick={() => setActive((current) => !current)}
+          >
+            <span className="sr-only">{active ? "إيقاف العرض" : "تفعيل العرض"}</span>
+            <span className="block size-7 rounded-full bg-paper-white" />
+          </button>
+          <input type="hidden" name="is_active" value={active ? "true" : "false"} />
+        </div>
+        <div className="flex items-center gap-3 sm:col-span-2">
+          <LoadingButton type="submit" className="h-10" pendingLabel={promotion ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
+            {promotion ? "حفظ العرض" : "إضافة عرض"}
+          </LoadingButton>
+          <FormNote state={state} />
+        </div>
+      </form>
+    </div>
   );
 }
 
