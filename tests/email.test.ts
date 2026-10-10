@@ -41,7 +41,7 @@ import {
   sendOrderEmail,
 } from "@/lib/email";
 
-const EMAIL_LOGO_FALLBACK = "https://eldawlystores.vercel.app/branding/doly-wordmark.svg";
+const EMAIL_LOGO_FALLBACK = "https://eldawlystores.vercel.app/branding/eldawly-logo.png";
 
 function extractRows(html: string): string[] {
   const rows: string[] = [];
@@ -181,25 +181,26 @@ describe("sendOrderEmail", () => {
     const html = sendMock.mock.calls[0]?.[0]?.html as string;
     expect(html).toContain("#1a211e");
     expect(html).toContain('src="https://cdn.example/wordmark.svg"');
-    expect(html).toContain('alt="Doly Stores"');
+    expect(html).toContain('alt="EldawlY"');
     expect(html).toContain('width="148"');
     expect(html).toContain("height:auto");
     expect(html).toContain("max-height:40px");
     expect(html).toContain('border="0"');
     expect(html).toContain("display:block");
-    expect(html).toContain(">Doly Stores</div>");
+    expect(html).toContain(">EldawlY</div>");
     expect(html).toContain("color:#ffffff");
     expect(html).toContain('bgcolor="#a92222"');
     expect(html).toContain('height="4"');
     expect(html).toContain("table-layout:fixed");
     expect(html).not.toContain("#7d1414");
     expect(html).not.toContain(EMAIL_LOGO_FALLBACK);
+    expect(html).not.toContain("doly-wordmark.svg");
     const headerRow = leafRows(html).find(
-      (row) => row.includes('width="32%"') && row.includes('alt="Doly Stores"')
+      (row) => row.includes('width="32%"') && row.includes('alt="EldawlY"')
     );
     expect(headerRow).toBeTruthy();
     expect(headerRow).toContain('src="https://cdn.example/wordmark.svg"');
-    expect(headerRow).toContain(">Doly Stores</div>");
+    expect(headerRow).toContain(">EldawlY</div>");
     expect(headerRow).toContain("تأكيد طلبك #DOLY-1");
     expect(headerRow).toContain('width="34%"');
     expect(headerRow).toContain("border-radius:12px");
@@ -213,9 +214,10 @@ describe("sendOrderEmail", () => {
     await sendOrderEmail("new-order-admin", orderMail);
     const html = sendMock.mock.calls[0]?.[0]?.html as string;
     expect(html).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
-    expect(html).toContain('alt="Doly Stores"');
+    expect(html).toContain("branding/eldawly-logo.png");
+    expect(html).toContain('alt="EldawlY"');
     expect(html).not.toContain("/images/store-mark.png");
-    expect(html).not.toContain('src="/branding/doly-wordmark.svg"');
+    expect(html).not.toContain("doly-wordmark.svg");
     const headerRow = leafRows(html).find((row) => row.includes('width="32%"'));
     expect(headerRow).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
     expect(headerRow).toContain("border-radius:12px");
@@ -236,8 +238,10 @@ describe("sendOrderEmail", () => {
     expect(result.status).toBe("sent");
     const html = sendMock.mock.calls[0]?.[0]?.html as string;
     expect(html).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
-    expect(html).toContain('alt="Doly Stores"');
-    expect(html).toContain(">Doly Stores</div>");
+    expect(html).toContain("branding/eldawly-logo.png");
+    expect(html).toContain('alt="EldawlY"');
+    expect(html).toContain(">EldawlY</div>");
+    expect(html).not.toContain("doly-wordmark.svg");
   });
 
   it("escapes an absolute svg logo and still shows the text fallback", async () => {
@@ -246,8 +250,8 @@ describe("sendOrderEmail", () => {
     const html = sendMock.mock.calls[0]?.[0]?.html as string;
     expect(html).toContain("<img");
     expect(html).toContain("https://cdn.example/wordmark.svg?x=&quot;&gt;&lt;script&gt;");
-    expect(html).toContain('alt="Doly Stores"');
-    expect(html).toContain(">Doly Stores</div>");
+    expect(html).toContain('alt="EldawlY"');
+    expect(html).toContain(">EldawlY</div>");
     expect(html).not.toContain("<script>");
   });
 });
@@ -318,6 +322,9 @@ describe("customer confirmation html", () => {
 
     expect(payload.html.match(/<img\b/g)).toHaveLength(2);
     expect(payload.html).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
+    expect(payload.html).toContain("branding/eldawly-logo.png");
+    expect(payload.html).toContain('alt="EldawlY"');
+    expect(payload.html).not.toContain("doly-wordmark.svg");
     expect(payload.html).toContain("https://cdn.example/phone.jpg");
     expect(payload.html).not.toContain("placeholder-product.svg");
     expect(payload.html).not.toContain("products/phone.jpg");
@@ -335,6 +342,8 @@ describe("customer confirmation html", () => {
     expect(productRow).toContain('width="36%"');
     expect(productRow).toContain("border-radius:8px");
     expect(productRow).toContain("SKU-1");
+    expect(productRow).toContain("<img");
+    expect(productRow).not.toContain(EMAIL_LOGO_FALLBACK);
     const productHeader = leafRows(payload.html).find(
       (row) => row.includes(">صورة<") && row.includes(">المنتج<")
     );
@@ -362,6 +371,28 @@ describe("customer confirmation html", () => {
       ],
     });
     expect(httpPayload.html.match(/<img\b/g)).toHaveLength(2);
+
+    const logoAsProduct = buildOrderEmailHtml("order-confirmed-customer", {
+      orderNumber: "DOLY-2",
+      customerName: "أحمد",
+      totalFormatted,
+      lines: [
+        {
+          productName: "شعار المتجر ليس صورة المنتج",
+          quantity: 1,
+          lineTotalFormatted: lineTotal,
+          imageUrl: EMAIL_LOGO_FALLBACK,
+        },
+      ],
+    });
+    expect(logoAsProduct.html).toContain(`src="${EMAIL_LOGO_FALLBACK}"`);
+    expect(logoAsProduct.html.match(/<img\b/g)).toHaveLength(1);
+    const logoProductRow = leafRows(logoAsProduct.html).find((row) =>
+      row.includes("شعار المتجر ليس صورة المنتج")
+    );
+    expect(logoProductRow).toBeTruthy();
+    expect(logoProductRow).not.toContain("<img");
+    expect(logoProductRow).not.toContain(EMAIL_LOGO_FALLBACK);
 
     const hostile = buildOrderEmailHtml("order-confirmed-customer", {
       orderNumber: "DOLY-2",
@@ -445,6 +476,9 @@ describe("resolveEmailLogoUrl", () => {
     expect(resolveEmailLogoUrl("http://cdn.example/wordmark.svg")).toBe("http://cdn.example/wordmark.svg");
     expect(resolveEmailLogoUrl("  https://cdn.example/wordmark.svg  ")).toBe("https://cdn.example/wordmark.svg");
     expect(resolveEmailLogoUrl("/branding/doly-wordmark.svg")).toBe(EMAIL_LOGO_FALLBACK);
+    expect(resolveEmailLogoUrl("https://eldawlystores.vercel.app/branding/doly-wordmark.svg")).toBe(
+      EMAIL_LOGO_FALLBACK
+    );
     expect(resolveEmailLogoUrl("/images/store-mark.png")).toBe(EMAIL_LOGO_FALLBACK);
     expect(resolveEmailLogoUrl("")).toBe(EMAIL_LOGO_FALLBACK);
     expect(resolveEmailLogoUrl(undefined)).toBe(EMAIL_LOGO_FALLBACK);

@@ -21,7 +21,7 @@ export interface EmailPayload {
 const ORDER_REPLY_TO = "sales@eldawlystores.shop";
 const RECEIPT_FONT = "Tahoma, 'Segoe UI', sans-serif";
 const RECEIPT_TEMPLATES = new Set<EmailTemplate>(["new-order-admin", "order-confirmed-customer"]);
-const EMAIL_LOGO_FALLBACK = "https://eldawlystores.vercel.app/branding/doly-wordmark.svg";
+const EMAIL_LOGO_FALLBACK = "https://eldawlystores.vercel.app/branding/eldawly-logo.png";
 
 export type EmailResult =
   | { status: "sent"; id: string }
@@ -124,14 +124,22 @@ export function resolveEmailImageUrl(stored: string | null | undefined): string 
 
 function httpImageUrl(stored: string | null | undefined): string | undefined {
   const value = stored?.trim() ?? "";
-  if (/^https?:\/\//i.test(value)) return value;
-  return undefined;
+  if (!/^https?:\/\//i.test(value) || isStoreLogoImageUrl(value)) return undefined;
+  return value;
 }
 
-/** Absolute http(s) logo URLs pass through. Relative values use the production wordmark. */
+function isRejectedEmailLogoUrl(value: string): boolean {
+  return !/^https?:\/\//i.test(value) || value.includes("doly-wordmark.svg");
+}
+
+function isStoreLogoImageUrl(value: string): boolean {
+  return value.includes("doly-wordmark.svg") || value.includes("eldawly-logo.png");
+}
+
+/** Absolute http(s) branding URLs pass through unless they are the old Doly SVG. */
 export function resolveEmailLogoUrl(logoUrl: string | null | undefined): string {
   const value = logoUrl?.trim() ?? "";
-  if (/^https?:\/\//i.test(value)) return value;
+  if (!isRejectedEmailLogoUrl(value)) return value;
   return EMAIL_LOGO_FALLBACK;
 }
 
@@ -311,8 +319,8 @@ function renderReceiptHtml(subject: string, data: OrderEmailContent, logoUrl: st
             <td width="100%" bgcolor="#1a211e" style="width:100%;padding:12px 16px;background-color:#1a211e;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#1a211e" style="width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;background-color:#1a211e;">
                 <tr>
-                  <td width="32%" align="center" valign="middle" bgcolor="#ffffff" style="width:32%;padding:8px;background-color:#ffffff;border-radius:12px;"><img src="${logoSrc}" alt="Doly Stores" width="148" border="0" style="display:block;width:148px;height:auto;max-height:40px;border:0;outline:none;text-decoration:none;" /></td>
-                  <td width="34%" valign="middle" align="right" bgcolor="#1a211e" style="width:34%;padding:8px 12px;font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;background-color:#1a211e;"><div style="font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;">Doly Stores</div></td>
+                  <td width="32%" align="center" valign="middle" bgcolor="#ffffff" style="width:32%;padding:8px;background-color:#ffffff;border-radius:12px;"><img src="${logoSrc}" alt="EldawlY" width="148" border="0" style="display:block;width:148px;height:auto;max-height:40px;border:0;outline:none;text-decoration:none;" /></td>
+                  <td width="34%" valign="middle" align="right" bgcolor="#1a211e" style="width:34%;padding:8px 12px;font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;background-color:#1a211e;"><div style="font-family:${RECEIPT_FONT};font-size:22px;line-height:1.3;font-weight:bold;color:#ffffff;">EldawlY</div></td>
                   <td width="34%" valign="middle" align="right" bgcolor="#1a211e" style="width:34%;padding:8px 12px;font-family:${RECEIPT_FONT};font-size:15px;line-height:1.5;color:#ffffff;background-color:#1a211e;">${escapeHtml(subject)}</td>
                 </tr>
               </table>
