@@ -165,7 +165,10 @@ async function deliverCheckoutEmails(data: OrderEmailData, orderId: string): Pro
   }
 }
 
-async function processCheckoutWithServiceRole(input: CheckoutInput): Promise<CheckoutResult> {
+async function processCheckoutWithServiceRole(
+  input: CheckoutInput,
+  userId: string | null
+): Promise<CheckoutResult> {
   if (input.items.some((item) => !isStoredVariantId(item.variantId))) {
     return { success: false, error: "منتج غير موجود في السلة" };
   }
@@ -199,6 +202,7 @@ async function processCheckoutWithServiceRole(input: CheckoutInput): Promise<Che
     p_promo_code: input.promoCode?.trim() ? input.promoCode.trim() : null,
     p_payment_method: input.paymentMethod,
     p_items: items,
+    p_user_id: userId,
   });
 
   if (error) {
@@ -368,13 +372,16 @@ async function processMockCheckout(input: CheckoutInput): Promise<CheckoutResult
   return { success: true, orderId, orderNumber, accessToken };
 }
 
-export async function processCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+export async function processCheckout(
+  input: CheckoutInput,
+  userId: string | null = null
+): Promise<CheckoutResult> {
   if (getShippingRate(input.governorate) == null) {
     return { success: false, error: "المحافظة غير متاحة" };
   }
 
   if (isServiceRoleConfigured()) {
-    return processCheckoutWithServiceRole(input);
+    return processCheckoutWithServiceRole(input, userId);
   }
 
   if (isSupabaseConfigured()) {

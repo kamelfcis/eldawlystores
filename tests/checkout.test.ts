@@ -92,4 +92,27 @@ describe("checkout governorates", () => {
     expect(isCheckoutSuccess({ accessToken: "" })).toBe(false);
     expect(isCheckoutSuccess({ accessToken: "order-token" })).toBe(true);
   });
+
+  it("persists logged-in checkout user_id via p_user_id on create_checkout_order", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20261010120000_checkout_user_id_and_link_orders.sql",
+      "utf8"
+    );
+    expect(sql).toContain("p_user_id uuid DEFAULT NULL");
+    expect(sql).toMatch(/INSERT INTO public\.orders[\s\S]*user_id[\s\S]*p_user_id/);
+    const checkoutFn = sql.split("CREATE OR REPLACE FUNCTION public.link_guest_orders_to_user")[0] ?? "";
+    expect(checkoutFn).not.toContain("auth.uid()");
+  });
+
+  it("links only guest orders with a matching email through link_guest_orders_to_user", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20261010120000_checkout_user_id_and_link_orders.sql",
+      "utf8"
+    );
+    expect(sql).toContain("link_guest_orders_to_user");
+    expect(sql).toContain("WHERE user_id IS NULL");
+    expect(sql).toContain("lower(btrim(customer_email)) = lower(btrim(v_email))");
+    expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.link_guest_orders_to_user() TO authenticated");
+    expect(sql).not.toContain("GRANT EXECUTE ON FUNCTION public.link_guest_orders_to_user() TO anon");
+  });
 });

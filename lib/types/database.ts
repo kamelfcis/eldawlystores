@@ -294,12 +294,17 @@ export interface Database {
           p_promo_code: string | null;
           p_payment_method: string;
           p_items: Json;
+          p_user_id?: string | null;
         };
         Returns: {
           order_id: string;
           order_number: string;
           access_token: string;
         }[];
+      };
+      link_guest_orders_to_user: {
+        Args: Record<string, never>;
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

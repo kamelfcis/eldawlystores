@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkoutSchema } from "@/lib/checkout/schema";
 import { processCheckout } from "@/lib/checkout";
+import { getCheckoutSessionUserId } from "@/lib/checkout/session-user";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
@@ -34,7 +35,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await processCheckout(parsed.data);
+    const userId = await getCheckoutSessionUserId();
+    const result = await processCheckout(parsed.data, userId);
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
