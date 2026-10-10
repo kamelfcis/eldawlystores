@@ -1,7 +1,7 @@
 import { getProducts, getCategories, getBrands } from "@/lib/catalog";
 import { poundsToPiasters } from "@/lib/money";
 import { ProductGrid } from "@/components/product/product-grid";
-import { CategoryPills } from "@/components/layout/category-pills";
+import { CategoryRail } from "@/components/home/category-rail";
 import { ProductFilters } from "@/components/product/product-filters";
 
 interface ProductsPageProps {
@@ -67,7 +67,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">كل المنتجات</h1>
-      <CategoryPills categories={categories} />
+      <section aria-label="تسوق حسب القسم">
+        <h2 className="mb-2 text-[16px] font-bold tracking-[0.038em] text-retail-ink">تسوق حسب القسم</h2>
+        <CategoryRail categories={categories} showAll />
+      </section>
       <ProductFilters
         brands={brands}
         currentSort={params.sort}

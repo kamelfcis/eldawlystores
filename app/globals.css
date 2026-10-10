@@ -216,10 +216,19 @@ body {
   }
 }
 
-.product-rail {
-  touch-action: pan-x pan-y;
+.touch-rail {
+  touch-action: pan-x;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 1rem;
+}
+
+@media (min-width: 768px) {
+  .touch-rail {
+    touch-action: pan-x pan-y;
+    scroll-snap-type: x mandatory;
+  }
 }
 
 .gallery-thumb:focus-visible {

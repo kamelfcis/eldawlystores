@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { getCategoryBySlug, getProducts, getCategories, getCategoryBrandMap } from "@/lib/catalog";
 import { poundsToPiasters } from "@/lib/money";
 import { ProductGrid } from "@/components/product/product-grid";
-import { CategoryPills } from "@/components/layout/category-pills";
+import { CategoryRail } from "@/components/home/category-rail";
+import { CategoryHero } from "@/components/catalog/category-hero";
 import { ProductFilters } from "@/components/product/product-filters";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 
@@ -82,7 +83,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0">
       <Breadcrumb
         items={[
           { label: "الرئيسية", href: "/" },
@@ -90,17 +91,17 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           ...(activeBrand ? [{ label: activeBrand.name }] : []),
         ]}
       />
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-retail-ink">{title}</h1>
-          <p className="mt-1 text-[14px] text-retail-muted">{result.total} منتج</p>
-          {category.description_ar && !activeBrand ? (
-            <p className="mt-1 text-graphite">{category.description_ar}</p>
-          ) : null}
-        </div>
-      </div>
-      <CategoryPills categories={categories} activeSlug={slug} />
-      <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-8">
+      <CategoryHero
+        title={title}
+        total={result.total}
+        description={activeBrand ? null : category.description_ar}
+        imageUrl={category.image_url}
+      />
+      <section className="mt-2 border-t border-retail-line pt-2" aria-label="تسوق حسب القسم">
+        <h2 className="mb-2 text-[16px] font-bold tracking-[0.038em] text-retail-ink">تسوق حسب القسم</h2>
+        <CategoryRail categories={categories} activeSlug={slug} showAll />
+      </section>
+      <div className="mt-6 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start lg:gap-8">
         <ProductFilters
           brands={categoryBrands}
           basePath={`/categories/${slug}`}
@@ -112,31 +113,31 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           currentAvailability={sp.availability}
         />
         <div className="min-w-0">
-      {result.products.length === 0 ? (
-        <div className="py-16 text-center text-graphite">
-          <p className="text-[16px]">لا توجد منتجات</p>
-          <a href={`/categories/${slug}`} className="mt-3 inline-block text-[14px] font-bold text-retail-ink">
-            مسح الفلاتر
-          </a>
-        </div>
-      ) : (
-        <ProductGrid products={result.products} />
-      )}
-      {result.totalPages > 1 ? (
-        <div className="flex justify-center gap-2 pt-4">
-          {Array.from({ length: result.totalPages }, (_, i) => i + 1).map((p) => (
-            <a
-              key={p}
-              href={pageHref(p)}
-              className={`rounded-[4px] border px-3 py-1 text-sm ${
-                p === page ? "border-carbon-ink bg-carbon-ink text-white" : "border-mist"
-              }`}
-            >
-              {p}
-            </a>
-          ))}
-        </div>
-      ) : null}
+          {result.products.length === 0 ? (
+            <div className="py-16 text-center text-graphite">
+              <p className="text-[16px]">لا توجد منتجات</p>
+              <a href={`/categories/${slug}`} className="mt-3 inline-block text-[14px] font-bold text-retail-ink">
+                مسح الفلاتر
+              </a>
+            </div>
+          ) : (
+            <ProductGrid products={result.products} />
+          )}
+          {result.totalPages > 1 ? (
+            <div className="flex justify-center gap-2 pt-4">
+              {Array.from({ length: result.totalPages }, (_, i) => i + 1).map((p) => (
+                <a
+                  key={p}
+                  href={pageHref(p)}
+                  className={`rounded-[4px] border px-3 py-1 text-sm ${
+                    p === page ? "border-carbon-ink bg-carbon-ink text-white" : "border-mist"
+                  }`}
+                >
+                  {p}
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -45,18 +45,27 @@ export function HomeSkeleton() {
   );
 }
 
-export function CatalogSkeleton() {
+export function CatalogSkeleton({ withHero = false }: { withHero?: boolean }) {
   return (
     <Status label="جارٍ تحميل المنتجات">
-      <div className="space-y-6">
-        <Skeleton className="h-4 w-36 bg-fog" />
-        <Skeleton className="h-8 w-48 bg-fog" />
-        <div className="flex gap-2">
-          {Array.from({ length: 5 }, (_, index) => (
-            <Skeleton key={index} className="h-10 w-24 rounded-full bg-fog" />
-          ))}
+      <div className="min-w-0">
+        {withHero ? (
+          <>
+            <Skeleton className="mb-4 h-4 w-36 bg-fog" />
+            <Skeleton className="h-[200px] rounded-[8px] bg-fog lg:h-[300px]" />
+          </>
+        ) : (
+          <Skeleton className="h-8 w-48 bg-fog" />
+        )}
+        <div className="mt-2 border-t border-retail-line pt-2">
+          <Skeleton className="mb-2 h-4 w-40 bg-fog" />
+          <div className="flex gap-2.5">
+            {Array.from({ length: 7 }, (_, index) => (
+              <Skeleton key={index} className="size-[88px] shrink-0 rounded-full bg-fog" />
+            ))}
+          </div>
         </div>
-        <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
+        <div className="mt-6 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
           <div className="mb-4 space-y-3 lg:mb-0">
             <Skeleton className="h-9 w-full bg-fog" />
             <Skeleton className="h-9 w-full bg-fog" />

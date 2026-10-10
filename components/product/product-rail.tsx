@@ -38,6 +38,41 @@ export function ProductRail({ products }: ProductRailProps) {
     return () => observer.disconnect();
   }, [products.length]);
 
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const syncIndexFromScroll = () => {
+      const cards = el.querySelectorAll<HTMLElement>("[data-rail-card]");
+      if (cards.length === 0) return;
+
+      const rtl = getComputedStyle(el).direction === "rtl";
+      const elRect = el.getBoundingClientRect();
+
+      let nearest = 0;
+      let minDistance = Infinity;
+
+      cards.forEach((card, i) => {
+        const cardRect = card.getBoundingClientRect();
+        const distance = rtl
+          ? Math.abs(cardRect.right - elRect.right)
+          : Math.abs(cardRect.left - elRect.left);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = i;
+        }
+      });
+
+      if (nearest !== indexRef.current) {
+        indexRef.current = nearest;
+        setIndex(nearest);
+      }
+    };
+
+    el.addEventListener("scroll", syncIndexFromScroll, { passive: true });
+    return () => el.removeEventListener("scroll", syncIndexFromScroll);
+  }, [products.length]);
+
   const alignTo = useCallback((target: number, behavior: ScrollBehavior) => {
     const el = scrollerRef.current;
     const card = el?.querySelectorAll<HTMLElement>("[data-rail-card]")[target];
@@ -138,13 +173,13 @@ export function ProductRail({ products }: ProductRailProps) {
 
       <div
         ref={scrollerRef}
-        className="product-rail flex snap-x snap-mandatory gap-6 overflow-x-auto scrollbar-hide"
+        className="touch-rail product-rail flex flex-nowrap gap-6 overflow-x-auto scrollbar-hide"
       >
         {products.map((product) => (
           <div
             key={product.id}
             data-rail-card
-            className="w-[min(280px,72%)] shrink-0 snap-start md:w-[calc((100%-48px)/3)] lg:w-[calc((100%-72px)/4)] xl:w-[calc((100%-96px)/5)]"
+            className="w-[min(280px,78vw)] shrink-0 snap-start md:w-[calc((100%-48px)/3)] lg:w-[calc((100%-72px)/4)] xl:w-[calc((100%-96px)/5)]"
           >
             <ProductCard product={product} />
           </div>
