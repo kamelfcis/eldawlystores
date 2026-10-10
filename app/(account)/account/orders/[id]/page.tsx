@@ -1,10 +1,12 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { ReorderButton } from "@/components/account/reorder-button";
 import { OrderStatusChip } from "@/components/account/order-status-chip";
 import { getSessionRole } from "@/lib/auth";
 import { ORDER_STATUS_LABELS } from "@/lib/account/order-status";
 import { formatMoney } from "@/lib/money";
+import { loadOrderItemImageUrls, PLACEHOLDER_PRODUCT_IMAGE } from "@/lib/orders/variant-images";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { OrderStatus } from "@/lib/types/database";
@@ -55,6 +57,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const items = itemsResult.data ?? [];
   const history = historyResult.error ? [] : (historyResult.data ?? []);
   const status = order.status as OrderStatus;
+  const imageByVariant = await loadOrderItemImageUrls(
+    supabase,
+    items.map((item) => item.variant_id)
+  );
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -90,17 +96,30 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
       <section>
         <h2 className="mb-3 text-[16px] font-bold text-retail-ink">المنتجات</h2>
-        <ul className="space-y-2 text-sm">
-          {items.map((item) => (
-            <li key={item.id} className="flex justify-between gap-4 border-b border-mist pb-2">
-              <span>
-                {item.product_name} × {item.quantity}
-              </span>
-              <span className="font-bold text-retail-ink">
-                {formatMoney(item.unit_price_piasters * item.quantity)}
-              </span>
-            </li>
-          ))}
+        <ul className="space-y-3 text-sm">
+          {items.map((item) => {
+            const imageUrl = imageByVariant.get(item.variant_id) ?? PLACEHOLDER_PRODUCT_IMAGE;
+            return (
+              <li key={item.id} className="flex items-center gap-3 border-b border-mist pb-3">
+                <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[8px] bg-fog">
+                  <Image
+                    src={imageUrl}
+                    alt={item.product_name}
+                    fill
+                    className="object-contain p-1"
+                    sizes="72px"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-medium text-retail-ink">{item.product_name}</p>
+                  <p className="text-[12px] text-graphite">الكمية: {item.quantity}</p>
+                </div>
+                <p className="shrink-0 text-[14px] font-bold text-retail-ink">
+                  {formatMoney(item.unit_price_piasters * item.quantity)}
+                </p>
+              </li>
+            );
+          })}
         </ul>
       </section>
 

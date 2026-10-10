@@ -12,6 +12,7 @@ import {
   type OrderEmailData,
   type OrderEmailLine,
 } from "@/lib/email";
+import { fetchVariantProductImageUrls } from "@/lib/orders/variant-images";
 import { getOrderStore } from "@/lib/orders";
 import type { Database, Json } from "@/lib/types/database";
 import { isStoredVariantId } from "./variant-id";
@@ -123,34 +124,11 @@ async function loadVariantImageUrls(
   supabase: SupabaseClient<Database>,
   variantIds: string[]
 ): Promise<Map<string, string>> {
+  const raw = await fetchVariantProductImageUrls(supabase, variantIds);
   const images = new Map<string, string>();
-  const ids = [...new Set(variantIds.filter((id) => id.length > 0))];
-  if (ids.length === 0) return images;
-
-  const { data: variants, error: variantsError } = await supabase
-    .from("product_variants")
-    .select("id, product_id")
-    .in("id", ids);
-  if (variantsError || !variants?.length) return images;
-
-  const productIds = [...new Set(variants.map((variant) => variant.product_id))];
-  const { data: productImages, error: imagesError } = await supabase
-    .from("product_images")
-    .select("product_id, url, sort_order")
-    .in("product_id", productIds)
-    .order("sort_order", { ascending: true });
-  if (imagesError || !productImages) return images;
-
-  const firstByProduct = new Map<string, string | undefined>();
-  const ranked = [...productImages].sort((a, b) => a.sort_order - b.sort_order);
-  for (const image of ranked) {
-    if (firstByProduct.has(image.product_id)) continue;
-    firstByProduct.set(image.product_id, resolveEmailImageUrl(image.url));
-  }
-
-  for (const variant of variants) {
-    const url = firstByProduct.get(variant.product_id);
-    if (url) images.set(variant.id, url);
+  for (const [variantId, url] of raw) {
+    const resolved = resolveEmailImageUrl(url);
+    if (resolved) images.set(variantId, resolved);
   }
   return images;
 }
