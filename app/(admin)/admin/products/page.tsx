@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { ArchiveProductForm, DeleteProductForm, ProductForm } from "@/components/admin/catalog-forms";
-import { AdminEmpty, AdminError, AdminPage, StatusPill } from "@/components/admin/admin-ui";
+import {
+  AdminEmpty,
+  AdminError,
+  AdminList,
+  AdminListCell,
+  AdminListRow,
+  AdminPage,
+  StatusPill,
+} from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { adminProductExportQuery, getAdminCatalog, parseAdminCatalogFilters } from "@/lib/admin/queries";
 import { formatMoney } from "@/lib/money";
 import { isR2Configured } from "@/lib/storage";
@@ -14,6 +21,7 @@ export const metadata = { title: "إدارة المنتجات" };
 const statusLabel: Record<ProductStatus, string> = { draft: "مسودة", active: "نشط", archived: "مؤرشف" };
 const fieldClass =
   "flex h-10 w-full rounded-[4px] border border-ash-border bg-paper-white px-3 text-[14px] text-carbon-ink";
+const productColumns = "lg:grid-cols-[auto_1.6fr_1fr_1fr_0.8fr_auto_auto]";
 
 function productBadge(stock: number, price: number, compareAt: number | null): string | null {
   if (stock <= 5) return "مخزون منخفض";
@@ -68,10 +76,10 @@ export default async function AdminProductsPage({
       title="المنتجات"
       action={
         <div className="flex flex-wrap items-center gap-2">
-          <Button asChild size="sm" variant="outline">
+          <Button asChild variant="outline">
             <a href={exportHref}>تصدير Excel</a>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild>
             <Link href={href({ edit: "new" })}>منتج جديد</Link>
           </Button>
         </div>
@@ -125,8 +133,8 @@ export default async function AdminProductsPage({
           </select>
         </label>
         <div className="flex items-end gap-2 sm:col-span-3">
-          <Button type="submit" size="sm">بحث</Button>
-          <Button asChild size="sm" variant="outline">
+          <Button type="submit">بحث</Button>
+          <Button asChild variant="outline">
             <Link href={`/admin/products?view=${view}`}>مسح</Link>
           </Button>
         </div>
@@ -134,10 +142,10 @@ export default async function AdminProductsPage({
 
       <div className="flex items-center justify-between gap-3">
         <div className="inline-flex rounded-[4px] border border-mist bg-paper-white p-1">
-          <Link href={href({ view: "cards", edit: params.edit ?? null })} className={`rounded-[4px] px-3 py-1 text-[14px] font-bold tracking-[0.038em] ${view === "cards" ? "bg-fog text-carbon-ink" : "text-graphite"}`}>
+          <Link href={href({ view: "cards", edit: params.edit ?? null })} className={`inline-flex min-h-10 items-center rounded-[4px] px-3 text-[14px] font-bold tracking-[0.038em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink ${view === "cards" ? "bg-fog text-carbon-ink" : "text-graphite"}`}>
             بطاقات
           </Link>
-          <Link href={href({ view: "table", edit: params.edit ?? null })} className={`rounded-[4px] px-3 py-1 text-[14px] font-bold tracking-[0.038em] ${view === "table" ? "bg-fog text-carbon-ink" : "text-graphite"}`}>
+          <Link href={href({ view: "table", edit: params.edit ?? null })} className={`inline-flex min-h-10 items-center rounded-[4px] px-3 text-[14px] font-bold tracking-[0.038em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink ${view === "table" ? "bg-fog text-carbon-ink" : "text-graphite"}`}>
             جدول
           </Link>
         </div>
@@ -208,43 +216,42 @@ export default async function AdminProductsPage({
           })}
         </ul>
       ) : (
-        <Table containerClassName="max-h-[640px] rounded-[8px] border border-mist bg-paper-white">
-          <TableHeader className="sticky top-0 z-10 bg-paper-white">
-            <TableRow>
-              <TableHead>الصورة</TableHead>
-              <TableHead>المنتج</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>السعر</TableHead>
-              <TableHead>المخزون</TableHead>
-              <TableHead>الحالة</TableHead>
-              <TableHead>إجراء</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id} className="bg-paper-white">
-                <TableCell>
-                  {product.image_url ? (
-                    <img src={product.image_url} alt="" className="h-12 w-12 rounded-[8px] object-cover" />
-                  ) : (
-                    <span className="block h-12 w-12 rounded-[8px] bg-fog" />
-                  )}
-                </TableCell>
-                <TableCell>{product.name_ar}</TableCell>
-                <TableCell className="font-mono text-[14px]">{product.sku}</TableCell>
-                <TableCell>{formatMoney(product.price_piasters)}</TableCell>
-                <TableCell>{product.stock}</TableCell>
-                <TableCell><StatusPill>{statusLabel[product.status]}</StatusPill></TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Link href={href({ edit: product.id })} className="text-[14px] font-bold tracking-[0.038em]">تعديل</Link>
-                    {product.status !== "archived" ? <ArchiveProductForm productId={product.id} /> : null}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <AdminList columns={["الصورة", "المنتج", "SKU", "السعر", "المخزون", "الحالة", "إجراء"]} gridClass={productColumns}>
+          {products.map((product) => (
+            <AdminListRow key={product.id} gridClass={productColumns}>
+              <AdminListCell label="الصورة">
+                {product.image_url ? (
+                  <img src={product.image_url} alt="" className="h-12 w-12 rounded-[8px] object-cover" />
+                ) : (
+                  <span className="block h-12 w-12 rounded-[8px] bg-fog" />
+                )}
+              </AdminListCell>
+              <AdminListCell label="المنتج">
+                <span className="text-carbon-ink">{product.name_ar}</span>
+              </AdminListCell>
+              <AdminListCell label="SKU">
+                <span className="font-mono text-[14px]">{product.sku || "—"}</span>
+              </AdminListCell>
+              <AdminListCell label="السعر">
+                <span>{formatMoney(product.price_piasters)}</span>
+              </AdminListCell>
+              <AdminListCell label="المخزون">
+                <span>{product.stock}</span>
+              </AdminListCell>
+              <AdminListCell label="الحالة">
+                <StatusPill>{statusLabel[product.status]}</StatusPill>
+              </AdminListCell>
+              <AdminListCell label="إجراء">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href={href({ edit: product.id })} className="inline-flex h-10 items-center text-[14px] font-bold tracking-[0.038em] text-carbon-ink">
+                    تعديل
+                  </Link>
+                  {product.status !== "archived" ? <ArchiveProductForm productId={product.id} /> : null}
+                </div>
+              </AdminListCell>
+            </AdminListRow>
+          ))}
+        </AdminList>
       )}
     </AdminPage>
   );

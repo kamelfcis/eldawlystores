@@ -29,7 +29,7 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 px-3">
+    <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="التنقل في لوحة الإدارة">
       {navItems.map((item) => {
         const Icon = item.icon;
         const active = item.href === "/admin" ? pathname === "/admin" : pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -37,8 +37,11 @@ export function AdminNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-2 rounded-[4px] px-3 py-2 text-[14px] font-bold tracking-[0.038em] ${
-              active ? "bg-fog text-carbon-ink" : "text-graphite hover:bg-fog hover:text-carbon-ink"
+            aria-current={active ? "page" : undefined}
+            className={`flex min-h-10 items-center gap-2 rounded-[4px] border-s-2 px-3 text-[14px] font-bold tracking-[0.038em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink ${
+              active
+                ? "border-carbon-ink bg-fog text-carbon-ink"
+                : "border-transparent text-graphite hover:bg-fog hover:text-carbon-ink"
             }`}
           >
             <Icon className="size-4 shrink-0" aria-hidden="true" />

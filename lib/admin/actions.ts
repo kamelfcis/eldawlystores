@@ -640,7 +640,7 @@ export async function saveAdminNotificationEmails(_prev: FormState, formData: Fo
   const validated = validateAdminNotificationEmails(parsed);
   if (!validated.ok) return { error: validated.error, saved: false, notice: null };
 
-  const payload = validated.emails as Json;
+  const payload = validated.inboxes as Json;
   const existing = await supabase.from("settings").select("key").eq("key", ADMIN_NOTIFICATION_EMAILS_KEY).maybeSingle();
   if (existing.error) return { error: dbMessage(existing.error), saved: false, notice: null };
   const { error } = existing.data

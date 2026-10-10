@@ -12,14 +12,19 @@ export const ADMIN_NOTIFICATION_EMAIL_MESSAGES = {
   empty: "من فضلك أدخل البريد الإلكتروني أولًا.",
 } as const;
 
+export type AdminNotificationInbox = {
+  email: string;
+  enabled: boolean;
+};
+
 export type AdminNotificationEmailsSetting =
   | { kind: "missing" }
-  | { kind: "saved"; emails: string[] }
+  | { kind: "saved"; inboxes: AdminNotificationInbox[] }
   | { kind: "unavailable" };
 
 export type AdminNotificationConfig =
   | { state: "missing" }
-  | { state: "saved"; emails: string[] }
+  | { state: "saved"; inboxes: AdminNotificationInbox[] }
   | { state: "unavailable" };
 
 export function normalizeAdminNotificationEmails(values: readonly string[]): string[] {
@@ -36,14 +41,52 @@ export function normalizeAdminNotificationEmails(values: readonly string[]): str
   return emails;
 }
 
+export function normalizeAdminNotificationInboxes(
+  values: readonly AdminNotificationInbox[]
+): AdminNotificationInbox[] {
+  const seen = new Set<string>();
+  const inboxes: AdminNotificationInbox[] = [];
+  for (const value of values) {
+    const email = value.email.trim();
+    if (!email) continue;
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    inboxes.push({ email, enabled: value.enabled !== false });
+  }
+  return inboxes;
+}
+
+export function enabledAdminNotificationEmails(inboxes: readonly AdminNotificationInbox[]): string[] {
+  return normalizeAdminNotificationEmails(inboxes.filter((inbox) => inbox.enabled).map((inbox) => inbox.email));
+}
+
 export function parseAdminNotificationEmails(value: string | undefined): string[] {
   if (!value) return [];
   return normalizeAdminNotificationEmails(value.split(","));
 }
 
-export function parseStoredAdminNotificationEmails(value: Json | null | undefined): string[] {
+function inboxFromUnknown(item: unknown): AdminNotificationInbox | null {
+  if (typeof item === "string") {
+    const email = item.trim();
+    return email ? { email, enabled: true } : null;
+  }
+  if (!item || typeof item !== "object") return null;
+  const record = item as { email?: unknown; enabled?: unknown };
+  if (typeof record.email !== "string") return null;
+  const email = record.email.trim();
+  if (!email) return null;
+  return { email, enabled: record.enabled !== false };
+}
+
+export function parseStoredAdminNotificationInboxes(value: Json | null | undefined): AdminNotificationInbox[] {
   if (Array.isArray(value)) {
-    return normalizeAdminNotificationEmails(value.filter((item): item is string => typeof item === "string"));
+    return normalizeAdminNotificationInboxes(
+      value.flatMap((item) => {
+        const inbox = inboxFromUnknown(item);
+        return inbox ? [inbox] : [];
+      })
+    );
   }
   if (typeof value === "string") {
     const trimmed = value.trim();
@@ -52,35 +95,47 @@ export function parseStoredAdminNotificationEmails(value: Json | null | undefine
       try {
         const parsed: unknown = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return normalizeAdminNotificationEmails(parsed.filter((item): item is string => typeof item === "string"));
+          return normalizeAdminNotificationInboxes(
+            parsed.flatMap((item) => {
+              const inbox = inboxFromUnknown(item);
+              return inbox ? [inbox] : [];
+            })
+          );
         }
       } catch {
         return [];
       }
     }
-    return parseAdminNotificationEmails(trimmed);
+    return normalizeAdminNotificationEmails(trimmed.split(",")).map((email) => ({ email, enabled: true }));
   }
   return [];
+}
+
+export function parseStoredAdminNotificationEmails(value: Json | null | undefined): string[] {
+  return enabledAdminNotificationEmails(parseStoredAdminNotificationInboxes(value));
 }
 
 export function readAdminNotificationEmailsSetting(
   row: { value: Json } | null | undefined
 ): Extract<AdminNotificationEmailsSetting, { kind: "missing" | "saved" }> {
   if (!row) return { kind: "missing" };
-  return { kind: "saved", emails: parseStoredAdminNotificationEmails(row.value) };
+  return { kind: "saved", inboxes: parseStoredAdminNotificationInboxes(row.value) };
 }
 
 export function formEmailsFromAdminSetting(
   setting: AdminNotificationEmailsSetting,
   envValue: string | undefined
-): { emails: string[]; emptyListSaved: boolean } {
+): { inboxes: AdminNotificationInbox[]; emptyListSaved: boolean } {
   if (setting.kind === "saved") {
-    return { emails: setting.emails, emptyListSaved: setting.emails.length === 0 };
+    return { inboxes: setting.inboxes, emptyListSaved: setting.inboxes.length === 0 };
   }
   if (setting.kind === "unavailable") {
-    return { emails: [], emptyListSaved: false };
+    return { inboxes: [], emptyListSaved: false };
   }
-  return { emails: parseAdminNotificationEmails(envValue), emptyListSaved: false };
+  return {
+    inboxes: parseAdminNotificationEmails(envValue).map((email) => ({ email, enabled: true })),
+    emptyListSaved: false,
+  };
 }
 
 export function resolveAdminNotificationEmails(
@@ -93,7 +148,7 @@ export function resolveAdminNotificationEmails(
   if (config.state === "missing") {
     return { emails: parseAdminNotificationEmails(envValue), unavailable: false };
   }
-  return { emails: normalizeAdminNotificationEmails(config.emails), unavailable: false };
+  return { emails: enabledAdminNotificationEmails(config.inboxes), unavailable: false };
 }
 
 function isPracticalEmail(value: string): boolean {
@@ -105,36 +160,51 @@ function isPracticalEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function validateInboxItem(item: unknown): { ok: true; inbox: AdminNotificationInbox } | { ok: false; error: string } {
+  if (typeof item === "string") {
+    const email = item.trim();
+    if (!email) return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.empty };
+    if (!isPracticalEmail(email)) return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
+    return { ok: true, inbox: { email, enabled: true } };
+  }
+  if (!item || typeof item !== "object") {
+    return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
+  }
+  const record = item as { email?: unknown; enabled?: unknown };
+  if (typeof record.email !== "string") {
+    return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
+  }
+  const email = record.email.trim();
+  if (!email) return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.empty };
+  if (!isPracticalEmail(email)) return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
+  if (record.enabled !== undefined && typeof record.enabled !== "boolean") {
+    return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
+  }
+  return { ok: true, inbox: { email, enabled: record.enabled !== false } };
+}
+
 export function validateAdminNotificationEmails(
   input: unknown
-): { ok: true; emails: string[] } | { ok: false; error: string } {
+): { ok: true; inboxes: AdminNotificationInbox[] } | { ok: false; error: string } {
   if (!Array.isArray(input)) {
     return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
   }
 
-  const emails: string[] = [];
+  const inboxes: AdminNotificationInbox[] = [];
   const seen = new Set<string>();
   let totalChars = 0;
 
   for (const item of input) {
-    if (typeof item !== "string") {
-      return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
-    }
-    const email = item.trim();
-    if (!email) {
-      return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.empty };
-    }
-    if (!isPracticalEmail(email)) {
-      return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.invalid };
-    }
-    const key = email.toLowerCase();
+    const parsed = validateInboxItem(item);
+    if (!parsed.ok) return parsed;
+    const key = parsed.inbox.email.toLowerCase();
     if (seen.has(key)) {
       return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.duplicate };
     }
     seen.add(key);
-    emails.push(email);
-    totalChars += email.length;
-    if (emails.length > ADMIN_NOTIFICATION_EMAILS_MAX_COUNT) {
+    inboxes.push(parsed.inbox);
+    totalChars += parsed.inbox.email.length;
+    if (inboxes.length > ADMIN_NOTIFICATION_EMAILS_MAX_COUNT) {
       return { ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.maxCount };
     }
     if (totalChars > ADMIN_NOTIFICATION_EMAILS_MAX_CHARS) {
@@ -142,5 +212,5 @@ export function validateAdminNotificationEmails(
     }
   }
 
-  return { ok: true, emails };
+  return { ok: true, inboxes };
 }

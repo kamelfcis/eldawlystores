@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const ordersList = readFileSync("app/(admin)/admin/orders/page.tsx", "utf8");
 const orderDetail = readFileSync("app/(admin)/admin/orders/[id]/page.tsx", "utf8");
 const statusForm = readFileSync("components/admin/order-status-form.tsx", "utf8");
+const adminUi = readFileSync("components/admin/admin-ui.tsx", "utf8");
 const settingsPage = readFileSync("app/(admin)/admin/settings/page.tsx", "utf8");
 const settingsForms = readFileSync("components/admin/settings-forms.tsx", "utf8");
 const storeSettings = readFileSync("lib/store-settings.ts", "utf8");
@@ -24,7 +25,8 @@ describe("admin orders list markup", () => {
     expect(ordersList).toContain("AdminEmpty");
     expect(ordersList).toContain("AdminError");
     expect(ordersList).toContain('variant="outline"');
-    expect(ordersList).toContain("min-h-10");
+    expect(ordersList).toContain("adminFilterChipClass");
+    expect(adminUi).toContain("min-h-10");
     expect(ordersList).toContain("الكل");
   });
 });
@@ -55,7 +57,11 @@ describe("order status form", () => {
 describe("admin notification settings privacy", () => {
   it("keeps the inboxes section on settings and off the storefront reader", () => {
     expect(settingsPage).toContain("إيميلات إشعارات الطلبات");
+    expect(settingsPage).toContain("?tab=");
     expect(settingsForms).toContain("لن يُرسل إشعار أدمن حتى تضيف عنواناً.");
+    expect(settingsForms).toContain('role="switch"');
+    expect(settingsForms).toContain("تفعيل");
+    expect(settingsForms).toContain("إيقاف");
     expect(settingsForms).toContain("تأكيد الحذف");
     expect(settingsForms).toContain("إلغاء");
     expect(settingsForms).not.toContain("window.confirm");
@@ -65,5 +71,18 @@ describe("admin notification settings privacy", () => {
     expect(publicPolicy).toContain("whatsapp_number");
     expect(publicPolicy).toContain("storefront_branding");
     expect(publicPolicy).not.toContain("admin_notification_emails");
+  });
+});
+
+describe("admin shipping filters markup", () => {
+  it("keeps count, clear, range-only fields, and AdminList headers", () => {
+    expect(settingsForms).toContain("محافظة من أصل");
+    expect(settingsForms).toContain("مسح التصفية");
+    expect(settingsForms).toContain("لا توجد محافظات مطابقة.");
+    expect(settingsForms).toContain('columns={["المحافظة", "الرسوم", "حفظ"]}');
+    expect(settingsForms).toContain('band === "range"');
+    expect(settingsForms).toContain("filterShippingRates");
+    expect(settingsPage).toContain("?tab=");
+    expect(settingsPage).toContain('aria-current={tab === item.id ? "page" : undefined}');
   });
 });

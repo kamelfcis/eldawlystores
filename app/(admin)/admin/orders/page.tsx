@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { AdminEmpty, AdminError, AdminPage, StatusPill, formatAdminTime } from "@/components/admin/admin-ui";
+import {
+  AdminEmpty,
+  AdminError,
+  AdminList,
+  AdminListCell,
+  AdminListRow,
+  AdminPage,
+  StatusPill,
+  adminFilterChipClass,
+  formatAdminTime,
+} from "@/components/admin/admin-ui";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
@@ -17,18 +27,19 @@ const statusLabels: Record<OrderStatus, string> = {
   rejected: "مرفوض",
 };
 
+const statusColors: Record<OrderStatus, string> = {
+  pending: "#c47b12",
+  confirmed: "#1d4e89",
+  shipped: "#0f6e6b",
+  delivered: "#5c4d8a",
+  cancelled: "#cc2e39",
+  rejected: "#cc2e39",
+};
+
 const orderColumns = "lg:grid-cols-[1.1fr_1fr_1fr_1fr_1.2fr_1.4fr]";
 
 function isStatus(value: string | undefined): value is OrderStatus {
   return ORDER_STATUSES.includes(value as OrderStatus);
-}
-
-function filterChipClass(selected: boolean): string {
-  const base =
-    "inline-flex min-h-10 items-center rounded-full border px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink";
-  return selected
-    ? `${base} border-carbon-ink bg-carbon-ink text-paper-white`
-    : `${base} border-ash-border bg-paper-white text-graphite`;
 }
 
 export default async function AdminOrdersPage({
@@ -44,18 +55,18 @@ export default async function AdminOrdersPage({
     <AdminPage
       title="الطلبات"
       action={
-        <Button asChild size="sm" variant="outline">
+        <Button asChild variant="outline">
           <a href="/api/admin/export?resource=orders">تصدير Excel</a>
         </Button>
       }
     >
       <AdminError message={error} />
       <div className="flex flex-wrap gap-2">
-        <Link href="/admin/orders" className={filterChipClass(!status)}>
+        <Link href="/admin/orders" className={adminFilterChipClass(!status)}>
           الكل
         </Link>
         {ORDER_STATUSES.map((value) => (
-          <Link key={value} href={`/admin/orders?status=${value}`} className={filterChipClass(status === value)}>
+          <Link key={value} href={`/admin/orders?status=${value}`} className={adminFilterChipClass(status === value)}>
             {statusLabels[value]}
           </Link>
         ))}
@@ -63,58 +74,37 @@ export default async function AdminOrdersPage({
       {orders.length === 0 ? (
         <AdminEmpty>{status ? "لا توجد طلبات بهذه الحالة." : "لا توجد طلبات بعد."}</AdminEmpty>
       ) : (
-        <div className="space-y-3 lg:space-y-0 lg:overflow-hidden lg:rounded-[8px] lg:border lg:border-mist lg:bg-paper-white">
-          <div
-            className={`hidden ${orderColumns} border-b border-mist bg-fog px-4 py-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink lg:grid lg:items-center`}
-          >
-            <span>رقم الطلب</span>
-            <span>العميل</span>
-            <span>الهاتف</span>
-            <span>الإجمالي</span>
-            <span>التاريخ</span>
-            <span>الحالة</span>
-          </div>
-          <ul>
-            {orders.map((order) => (
-              <li
-                key={order.id}
-                className={`grid gap-3 rounded-[8px] border border-mist bg-paper-white px-4 py-3 text-[14px] lg:rounded-none lg:border-0 lg:border-b lg:last:border-0 ${orderColumns} lg:items-center`}
-              >
-                <div>
-                  <p className="mb-1 text-[12px] text-graphite lg:hidden">رقم الطلب</p>
-                  <Link href={`/admin/orders/${order.id}`} className="font-mono font-bold text-carbon-ink underline-offset-2 hover:underline">
-                    {order.orderNumber}
-                  </Link>
+        <AdminList columns={["رقم الطلب", "العميل", "الهاتف", "الإجمالي", "التاريخ", "الحالة"]} gridClass={orderColumns}>
+          {orders.map((order) => (
+            <AdminListRow key={order.id} gridClass={orderColumns}>
+              <AdminListCell label="رقم الطلب">
+                <Link href={`/admin/orders/${order.id}`} className="font-mono font-bold text-carbon-ink underline-offset-2 hover:underline">
+                  {order.orderNumber}
+                </Link>
+              </AdminListCell>
+              <AdminListCell label="العميل">
+                <span className="text-[14px] text-carbon-ink">{order.customerName}</span>
+              </AdminListCell>
+              <AdminListCell label="الهاتف">
+                <span className="text-graphite" dir="ltr">
+                  {order.customerPhone}
+                </span>
+              </AdminListCell>
+              <AdminListCell label="الإجمالي">
+                <span className="text-[14px] text-carbon-ink">{formatMoney(order.totalPiasters)}</span>
+              </AdminListCell>
+              <AdminListCell label="التاريخ">
+                <span className="text-graphite">{formatAdminTime(order.createdAt)}</span>
+              </AdminListCell>
+              <AdminListCell label="الحالة">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                  <StatusPill color={statusColors[order.status]}>{statusLabels[order.status]}</StatusPill>
+                  <OrderStatusForm orderId={order.id} status={order.status} />
                 </div>
-                <div>
-                  <p className="mb-1 text-[12px] text-graphite lg:hidden">العميل</p>
-                  <span className="text-[14px] text-carbon-ink">{order.customerName}</span>
-                </div>
-                <div>
-                  <p className="mb-1 text-[12px] text-graphite lg:hidden">الهاتف</p>
-                  <span className="text-graphite" dir="ltr">
-                    {order.customerPhone}
-                  </span>
-                </div>
-                <div>
-                  <p className="mb-1 text-[12px] text-graphite lg:hidden">الإجمالي</p>
-                  <span className="text-[14px] text-carbon-ink">{formatMoney(order.totalPiasters)}</span>
-                </div>
-                <div>
-                  <p className="mb-1 text-[12px] text-graphite lg:hidden">التاريخ</p>
-                  <span className="text-graphite">{formatAdminTime(order.createdAt)}</span>
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <p className="text-[12px] text-graphite lg:hidden">الحالة</p>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                    <StatusPill>{statusLabels[order.status]}</StatusPill>
-                    <OrderStatusForm orderId={order.id} status={order.status} />
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+              </AdminListCell>
+            </AdminListRow>
+          ))}
+        </AdminList>
       )}
     </AdminPage>
   );

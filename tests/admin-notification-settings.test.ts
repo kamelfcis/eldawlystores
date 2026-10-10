@@ -65,6 +65,8 @@ import {
   ADMIN_NOTIFICATION_EMAIL_MESSAGES,
   ADMIN_NOTIFICATION_EMAILS_KEY,
   formEmailsFromAdminSetting,
+  parseStoredAdminNotificationInboxes,
+  resolveAdminNotificationEmails,
   validateAdminNotificationEmails,
 } from "@/lib/admin/notification-emails";
 import { getAdminSettings } from "@/lib/admin/queries";
@@ -110,42 +112,137 @@ describe("validateAdminNotificationEmails", () => {
 
   it("keeps first-seen casing and order for a valid list", () => {
     const result = validateAdminNotificationEmails([" Orders@example.com ", "ops@example.com"]);
-    expect(result).toEqual({ ok: true, emails: ["Orders@example.com", "ops@example.com"] });
+    expect(result).toEqual({
+      ok: true,
+      inboxes: [
+        { email: "Orders@example.com", enabled: true },
+        { email: "ops@example.com", enabled: true },
+      ],
+    });
   });
 
   it("allows an explicit empty list", () => {
-    expect(validateAdminNotificationEmails([])).toEqual({ ok: true, emails: [] });
+    expect(validateAdminNotificationEmails([])).toEqual({ ok: true, inboxes: [] });
+  });
+
+  it("accepts inbox objects and keeps disabled addresses in the list", () => {
+    const result = validateAdminNotificationEmails([
+      { email: "live@example.com", enabled: true },
+      { email: "quiet@example.com", enabled: false },
+    ]);
+    expect(result).toEqual({
+      ok: true,
+      inboxes: [
+        { email: "live@example.com", enabled: true },
+        { email: "quiet@example.com", enabled: false },
+      ],
+    });
+  });
+
+  it("counts a disabled address toward the ten-address limit", () => {
+    const inboxes = Array.from({ length: 11 }, (_, index) => ({
+      email: `user${index}@example.com`,
+      enabled: index === 0,
+    }));
+    expect(validateAdminNotificationEmails(inboxes)).toEqual({
+      ok: false,
+      error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.maxCount,
+    });
+  });
+
+  it("counts a disabled address toward the character limit", () => {
+    const result = validateAdminNotificationEmails([{ email: `${"a".repeat(1990)}@example.com`, enabled: false }]);
+    expect(result).toEqual({ ok: false, error: ADMIN_NOTIFICATION_EMAIL_MESSAGES.maxChars });
   });
 });
 
 describe("formEmailsFromAdminSetting", () => {
   it("seeds the form from env when the row is missing", () => {
     expect(formEmailsFromAdminSetting({ kind: "missing" }, "one@example.com, two@example.com")).toEqual({
-      emails: ["one@example.com", "two@example.com"],
+      inboxes: [
+        { email: "one@example.com", enabled: true },
+        { email: "two@example.com", enabled: true },
+      ],
       emptyListSaved: false,
     });
   });
 
   it("does not merge env after a saved list", () => {
     expect(
-      formEmailsFromAdminSetting({ kind: "saved", emails: ["saved@example.com"] }, "env@example.com")
+      formEmailsFromAdminSetting(
+        { kind: "saved", inboxes: [{ email: "saved@example.com", enabled: true }] },
+        "env@example.com"
+      )
     ).toEqual({
-      emails: ["saved@example.com"],
+      inboxes: [{ email: "saved@example.com", enabled: true }],
       emptyListSaved: false,
     });
   });
 
   it("keeps a saved empty list empty and marks the warning", () => {
-    expect(formEmailsFromAdminSetting({ kind: "saved", emails: [] }, "env@example.com")).toEqual({
-      emails: [],
+    expect(formEmailsFromAdminSetting({ kind: "saved", inboxes: [] }, "env@example.com")).toEqual({
+      inboxes: [],
       emptyListSaved: true,
+    });
+  });
+
+  it("shows disabled saved addresses without merging env", () => {
+    expect(
+      formEmailsFromAdminSetting(
+        { kind: "saved", inboxes: [{ email: "quiet@example.com", enabled: false }] },
+        "env@example.com"
+      )
+    ).toEqual({
+      inboxes: [{ email: "quiet@example.com", enabled: false }],
+      emptyListSaved: false,
     });
   });
 
   it("does not pretend a failed read is an intentional empty list", () => {
     expect(formEmailsFromAdminSetting({ kind: "unavailable" }, "env@example.com")).toEqual({
-      emails: [],
+      inboxes: [],
       emptyListSaved: false,
+    });
+  });
+});
+
+describe("resolveAdminNotificationEmails", () => {
+  it("sends only enabled addresses from a saved list", () => {
+    expect(
+      resolveAdminNotificationEmails(
+        {
+          state: "saved",
+          inboxes: [
+            { email: "live@example.com", enabled: true },
+            { email: "quiet@example.com", enabled: false },
+          ],
+        },
+        "env@example.com"
+      )
+    ).toEqual({ emails: ["live@example.com"], unavailable: false });
+  });
+
+  it("does not restore env when every saved address is disabled", () => {
+    expect(
+      resolveAdminNotificationEmails(
+        { state: "saved", inboxes: [{ email: "quiet@example.com", enabled: false }] },
+        "env@example.com"
+      )
+    ).toEqual({ emails: [], unavailable: false });
+  });
+
+  it("still sends a legacy string array as all enabled", () => {
+    const inboxes = parseStoredAdminNotificationInboxes(["legacy@example.com", "ops@example.com"]);
+    expect(resolveAdminNotificationEmails({ state: "saved", inboxes }, "env@example.com")).toEqual({
+      emails: ["legacy@example.com", "ops@example.com"],
+      unavailable: false,
+    });
+  });
+
+  it("falls back to env only when the row is missing", () => {
+    expect(resolveAdminNotificationEmails({ state: "missing" }, "env@example.com")).toEqual({
+      emails: ["env@example.com"],
+      unavailable: false,
     });
   });
 });
@@ -173,8 +270,39 @@ describe("getAdminSettings notification key", () => {
       error: null,
     });
     const empty = await getAdminSettings();
-    expect(empty.adminNotificationEmails).toEqual({ kind: "saved", emails: [] });
+    expect(empty.adminNotificationEmails).toEqual({ kind: "saved", inboxes: [] });
     expect(empty.adminNotificationEmails).not.toEqual(missing.adminNotificationEmails);
+
+    settingsQueryMock.mockResolvedValue({
+      data: [
+        {
+          key: ADMIN_NOTIFICATION_EMAILS_KEY,
+          value: [
+            { email: "live@example.com", enabled: true },
+            { email: "quiet@example.com", enabled: false },
+          ],
+        },
+      ],
+      error: null,
+    });
+    const objects = await getAdminSettings();
+    expect(objects.adminNotificationEmails).toEqual({
+      kind: "saved",
+      inboxes: [
+        { email: "live@example.com", enabled: true },
+        { email: "quiet@example.com", enabled: false },
+      ],
+    });
+
+    settingsQueryMock.mockResolvedValue({
+      data: [{ key: ADMIN_NOTIFICATION_EMAILS_KEY, value: ["legacy@example.com"] }],
+      error: null,
+    });
+    const legacy = await getAdminSettings();
+    expect(legacy.adminNotificationEmails).toEqual({
+      kind: "saved",
+      inboxes: [{ email: "legacy@example.com", enabled: true }],
+    });
   });
 
   it("marks the setting unavailable when the settings query fails", async () => {
@@ -262,7 +390,7 @@ describe("saveAdminNotificationEmails", () => {
     expect(result).toEqual({ error: null, saved: true, notice: null });
     expect(insertMock).toHaveBeenCalledWith({
       key: ADMIN_NOTIFICATION_EMAILS_KEY,
-      value: ["Orders@example.com"],
+      value: [{ email: "Orders@example.com", enabled: true }],
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/settings");
   });
@@ -274,6 +402,24 @@ describe("saveAdminNotificationEmails", () => {
     );
     expect(result.saved).toBe(true);
     expect(insertMock).toHaveBeenCalledWith({ key: ADMIN_NOTIFICATION_EMAILS_KEY, value: [] });
+  });
+
+  it("persists enabled and disabled inbox objects", async () => {
+    const result = await saveAdminNotificationEmails(
+      { error: null, saved: false, notice: null },
+      formDataWithEmails([
+        { email: "live@example.com", enabled: true },
+        { email: "quiet@example.com", enabled: false },
+      ])
+    );
+    expect(result.saved).toBe(true);
+    expect(insertMock).toHaveBeenCalledWith({
+      key: ADMIN_NOTIFICATION_EMAILS_KEY,
+      value: [
+        { email: "live@example.com", enabled: true },
+        { email: "quiet@example.com", enabled: false },
+      ],
+    });
   });
 
   it("does not save when the caller is not an administrator", async () => {

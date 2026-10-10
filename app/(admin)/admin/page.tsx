@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { Banknote, Receipt, ShoppingBag, TriangleAlert, type LucideIcon } from "lucide-react";
 import { DashboardCharts } from "@/components/admin/dashboard-charts";
-import { AdminEmpty, AdminError, AdminPage, StatusPill, formatAdminTime } from "@/components/admin/admin-ui";
+import {
+  AdminEmpty,
+  AdminError,
+  AdminList,
+  AdminListCell,
+  AdminListRow,
+  AdminPage,
+  StatusPill,
+  formatAdminTime,
+} from "@/components/admin/admin-ui";
 import { formatMoney } from "@/lib/money";
 import { ORDER_STATUSES, getAdminDailyTrend, getAdminMetrics, listAdminOrders } from "@/lib/orders";
 import type { OrderStatus } from "@/lib/types/database";
@@ -59,19 +68,33 @@ export default async function AdminDashboardPage() {
         {latest.orders.length === 0 ? (
           <AdminEmpty>لا توجد طلبات بعد.</AdminEmpty>
         ) : (
-          <ul>
+          <AdminList
+            columns={["رقم الطلب", "العميل", "الحالة", "الإجمالي", "التاريخ"]}
+            gridClass="lg:grid-cols-5"
+            flush
+          >
             {latest.orders.map((order) => (
-              <li key={order.id} className="grid grid-cols-2 gap-2 border-b border-mist px-4 py-3 text-[14px] last:border-0 sm:grid-cols-5">
-                <Link href={`/admin/orders/${order.id}`} className="font-mono text-carbon-ink">
-                  {order.orderNumber}
-                </Link>
-                <span>{order.customerName}</span>
-                <StatusPill>{statusLabels[order.status]}</StatusPill>
-                <span>{formatMoney(order.totalPiasters)}</span>
-                <span className="text-graphite">{formatAdminTime(order.createdAt)}</span>
-              </li>
+              <AdminListRow key={order.id} gridClass="lg:grid-cols-5">
+                <AdminListCell label="رقم الطلب">
+                  <Link href={`/admin/orders/${order.id}`} className="font-mono font-bold text-carbon-ink underline-offset-2 hover:underline">
+                    {order.orderNumber}
+                  </Link>
+                </AdminListCell>
+                <AdminListCell label="العميل">
+                  <span className="text-carbon-ink">{order.customerName}</span>
+                </AdminListCell>
+                <AdminListCell label="الحالة">
+                  <StatusPill color={statusColors[order.status]}>{statusLabels[order.status]}</StatusPill>
+                </AdminListCell>
+                <AdminListCell label="الإجمالي">
+                  <span>{formatMoney(order.totalPiasters)}</span>
+                </AdminListCell>
+                <AdminListCell label="التاريخ">
+                  <span className="text-graphite">{formatAdminTime(order.createdAt)}</span>
+                </AdminListCell>
+              </AdminListRow>
             ))}
-          </ul>
+          </AdminList>
         )}
       </section>
 
@@ -80,17 +103,23 @@ export default async function AdminDashboardPage() {
         {metrics.lowStock.length === 0 ? (
           <AdminEmpty>لا توجد منتجات منخفضة المخزون.</AdminEmpty>
         ) : (
-          <ul>
+          <AdminList columns={["المنتج", "SKU", "المخزون"]} gridClass="lg:grid-cols-3" flush>
             {metrics.lowStock.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 border-b border-mist px-4 py-3 text-[14px] last:border-0">
-                <Link href={item.productId ? `/admin/products?edit=${item.productId}` : "/admin/products"} className="text-carbon-ink">
-                  {item.product}
-                </Link>
-                <span className="font-mono text-graphite">{item.sku}</span>
-                <span className="text-ember-red">{item.stock}</span>
-              </li>
+              <AdminListRow key={item.id} gridClass="lg:grid-cols-3">
+                <AdminListCell label="المنتج">
+                  <Link href={item.productId ? `/admin/products?edit=${item.productId}` : "/admin/products"} className="font-bold text-carbon-ink underline-offset-2 hover:underline">
+                    {item.product}
+                  </Link>
+                </AdminListCell>
+                <AdminListCell label="SKU">
+                  <span className="font-mono text-graphite">{item.sku}</span>
+                </AdminListCell>
+                <AdminListCell label="المخزون">
+                  <span className="text-ember-red">{item.stock}</span>
+                </AdminListCell>
+              </AdminListRow>
             ))}
-          </ul>
+          </AdminList>
         )}
       </section>
     </AdminPage>

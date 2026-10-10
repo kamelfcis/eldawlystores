@@ -1,14 +1,22 @@
 import Link from "next/link";
 import { BannerForm, DeleteBannerForm, MoveBannerForm } from "@/components/admin/catalog-forms";
-import { AdminEmpty, AdminError, AdminPage, StatusPill } from "@/components/admin/admin-ui";
+import {
+  AdminEmpty,
+  AdminError,
+  AdminList,
+  AdminListCell,
+  AdminListRow,
+  AdminPage,
+  StatusPill,
+} from "@/components/admin/admin-ui";
+import { Button } from "@/components/ui/button";
 import { getAdminBanners } from "@/lib/admin/queries";
 import { isR2Configured } from "@/lib/storage";
 import type { BannerType } from "@/lib/types/database";
 
 export const metadata = { title: "إدارة الصفحة الرئيسية" };
 
-const addControlClass =
-  "inline-flex h-10 shrink-0 items-center justify-center rounded-[4px] bg-carbon-ink px-4 text-[14px] font-bold text-paper-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink focus-visible:ring-offset-2";
+const bannerColumns = "lg:grid-cols-[auto_1.6fr_auto_auto]";
 
 const SECTIONS: Array<{ type: BannerType; title: string; addLabel: string; helper: string }> = [
   {
@@ -59,9 +67,11 @@ export default async function AdminHomepagePage({
           <section key={section.type} id={section.type} className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-[16px] font-bold text-carbon-ink">{section.title}</h2>
-              <Link href={formOpen ? "/admin/homepage" : `/admin/homepage?edit=new&type=${section.type}`} className={addControlClass}>
-                {formOpen ? "إغلاق" : section.addLabel}
-              </Link>
+              <Button asChild variant={formOpen ? "outline" : "default"}>
+                <Link href={formOpen ? "/admin/homepage" : `/admin/homepage?edit=new&type=${section.type}`}>
+                  {formOpen ? "إغلاق" : section.addLabel}
+                </Link>
+              </Button>
             </div>
             <p className="text-[14px] text-graphite">{section.helper}</p>
             {formOpen ? (
@@ -76,29 +86,42 @@ export default async function AdminHomepagePage({
             {rows.length === 0 ? (
               <AdminEmpty>لا توجد عناصر.</AdminEmpty>
             ) : (
-              <ul className="overflow-hidden rounded-[8px] border border-mist bg-paper-white">
+              <AdminList columns={["الصورة", "العنوان", "الحالة", "إجراء"]} gridClass={bannerColumns}>
                 {rows.map((banner, index) => (
-                  <li key={banner.id} className="flex flex-wrap items-center gap-3 border-b border-mist px-4 py-3 last:border-0">
-                    {banner.image_url ? (
-                      <img src={banner.image_url} alt="" className="h-16 w-24 rounded-[8px] object-cover" />
-                    ) : (
-                      <div className="h-16 w-24 rounded-[8px] border border-mist bg-fog" />
-                    )}
-                    <div className="min-w-0 flex-1 text-[14px]">
-                      <p className="text-carbon-ink">{banner.title_ar}</p>
-                      {banner.subtitle_ar ? <p className="text-graphite">{banner.subtitle_ar}</p> : null}
-                      {banner.link_url ? <p className="truncate text-graphite">{banner.link_url}</p> : null}
-                    </div>
-                    <StatusPill>{banner.is_active ? "نشط" : "معطل"}</StatusPill>
-                    <MoveBannerForm id={banner.id} direction="up" disabled={index === 0} />
-                    <MoveBannerForm id={banner.id} direction="down" disabled={index === rows.length - 1} />
-                    <Link href={`/admin/homepage?edit=${banner.id}`} className="text-[14px] font-bold tracking-[0.038em]">
-                      تعديل
-                    </Link>
-                    <DeleteBannerForm id={banner.id} />
-                  </li>
+                  <AdminListRow key={banner.id} gridClass={bannerColumns}>
+                    <AdminListCell label="الصورة">
+                      {banner.image_url ? (
+                        <img src={banner.image_url} alt="" className="h-16 w-24 rounded-[8px] object-cover" />
+                      ) : (
+                        <div className="h-16 w-24 rounded-[8px] border border-mist bg-fog" />
+                      )}
+                    </AdminListCell>
+                    <AdminListCell label="العنوان">
+                      <div className="min-w-0 text-[14px]">
+                        <p className="text-carbon-ink">{banner.title_ar}</p>
+                        {banner.subtitle_ar ? <p className="text-graphite">{banner.subtitle_ar}</p> : null}
+                        {banner.link_url ? <p className="truncate text-graphite">{banner.link_url}</p> : null}
+                      </div>
+                    </AdminListCell>
+                    <AdminListCell label="الحالة">
+                      <StatusPill>{banner.is_active ? "نشط" : "معطل"}</StatusPill>
+                    </AdminListCell>
+                    <AdminListCell label="إجراء">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <MoveBannerForm id={banner.id} direction="up" disabled={index === 0} />
+                        <MoveBannerForm id={banner.id} direction="down" disabled={index === rows.length - 1} />
+                        <Link
+                          href={`/admin/homepage?edit=${banner.id}`}
+                          className="inline-flex h-10 items-center text-[14px] font-bold tracking-[0.038em] text-carbon-ink underline-offset-2 hover:underline"
+                        >
+                          تعديل
+                        </Link>
+                        <DeleteBannerForm id={banner.id} />
+                      </div>
+                    </AdminListCell>
+                  </AdminListRow>
                 ))}
-              </ul>
+              </AdminList>
             )}
           </section>
         );

@@ -377,6 +377,43 @@ describe("sendOrderEmail", () => {
     expect(sendMock).not.toHaveBeenCalled();
     expect(result.status).not.toBe("not-configured");
   });
+
+  it("does not send a disabled saved inbox", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({
+      data: {
+        value: [
+          { email: "live@example.com", enabled: true },
+          { email: "quiet@example.com", enabled: false },
+        ],
+      },
+      error: null,
+    });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "env@example.com";
+    await sendOrderEmail("new-order-admin", orderMail);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock.mock.calls[0]?.[0]?.to).toBe("live@example.com");
+  });
+
+  it("treats an all-disabled saved list as not-configured and does not merge env", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({
+      data: { value: [{ email: "quiet@example.com", enabled: false }] },
+      error: null,
+    });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "env@example.com";
+    const result = await sendOrderEmail("new-order-admin", orderMail);
+    expect(result.status).toBe("not-configured");
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("still sends a legacy string array as all enabled", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: { value: ["legacy@example.com", "ops@example.com"] }, error: null });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "env@example.com";
+    await sendOrderEmail("new-order-admin", orderMail);
+    expect(sendMock.mock.calls.map((call) => call[0]?.to)).toEqual(["legacy@example.com", "ops@example.com"]);
+  });
 });
 
 describe("customer confirmation html", () => {

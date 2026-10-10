@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { CategoryForm, DeleteCategoryForm } from "@/components/admin/catalog-forms";
-import { AdminEmpty, AdminError, AdminPage } from "@/components/admin/admin-ui";
+import { AdminEmpty, AdminError, AdminList, AdminListCell, AdminListRow, AdminPage } from "@/components/admin/admin-ui";
+import { Button } from "@/components/ui/button";
 import { getAdminCatalog } from "@/lib/admin/queries";
 import { isR2Configured } from "@/lib/storage";
 
 export const metadata = { title: "إدارة الفئات" };
+
+const categoryColumns = "lg:grid-cols-[1.4fr_1fr_2fr_auto]";
 
 export default async function AdminCategoriesPage({
   searchParams,
@@ -15,14 +18,17 @@ export default async function AdminCategoriesPage({
   const { categories, error } = await getAdminCatalog();
   const r2Enabled = isR2Configured();
   const editing = params.edit && params.edit !== "new" ? categories.find((category) => category.id === params.edit) : undefined;
+  const creating = params.edit === "new";
 
   return (
     <AdminPage
       title="الفئات"
       action={
-        <Link href={params.edit === "new" ? "/admin/categories" : "/admin/categories?edit=new"} className="text-[14px] font-bold tracking-[0.038em] text-carbon-ink">
-          {params.edit === "new" ? "إغلاق" : "فئة جديدة"}
-        </Link>
+        <Button asChild variant="outline">
+          <Link href={creating ? "/admin/categories" : "/admin/categories?edit=new"}>
+            {creating ? "إغلاق" : "فئة جديدة"}
+          </Link>
+        </Button>
       }
     >
       <AdminError message={error} />
@@ -38,22 +44,33 @@ export default async function AdminCategoriesPage({
       {categories.length === 0 ? (
         <AdminEmpty>لا توجد فئات.</AdminEmpty>
       ) : (
-        <ul className="overflow-hidden rounded-[8px] border border-mist bg-paper-white">
+        <AdminList columns={["الاسم", "المسار", "الوصف", "إجراء"]} gridClass={categoryColumns}>
           {categories.map((category) => (
-            <li key={category.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-mist px-4 py-3 text-[14px] last:border-0">
-              <div>
-                <p>{category.name_ar}</p>
-                <p className="font-mono text-graphite">{category.slug}</p>
-                {category.description_ar ? <p className="text-graphite">{category.description_ar}</p> : null}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-graphite">{category.sort_order}</span>
-                <Link href={`/admin/categories?edit=${category.id}`} className="font-bold tracking-[0.038em]">تعديل</Link>
-                <DeleteCategoryForm id={category.id} />
-              </div>
-            </li>
+            <AdminListRow key={category.id} gridClass={categoryColumns}>
+              <AdminListCell label="الاسم">
+                <span className="text-carbon-ink">{category.name_ar}</span>
+              </AdminListCell>
+              <AdminListCell label="المسار">
+                <span className="font-mono text-graphite">{category.slug}</span>
+              </AdminListCell>
+              <AdminListCell label="الوصف">
+                <span className="text-graphite">{category.description_ar || "—"}</span>
+              </AdminListCell>
+              <AdminListCell label="إجراء">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-graphite">ترتيب {category.sort_order}</span>
+                  <Link
+                    href={`/admin/categories?edit=${category.id}`}
+                    className="inline-flex h-10 items-center font-bold tracking-[0.038em] text-carbon-ink underline-offset-2 hover:underline"
+                  >
+                    تعديل
+                  </Link>
+                  <DeleteCategoryForm id={category.id} />
+                </div>
+              </AdminListCell>
+            </AdminListRow>
           ))}
-        </ul>
+        </AdminList>
       )}
     </AdminPage>
   );

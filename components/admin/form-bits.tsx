@@ -50,8 +50,8 @@ export function ConfirmButton({
 
   const className =
     variant === "ember"
-      ? "inline-flex h-8 items-center rounded-[4px] border border-ember-red px-3 text-[14px] font-bold tracking-[0.038em] text-ember-red disabled:opacity-50"
-      : "inline-flex h-8 items-center rounded-[4px] border border-ash-border px-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink disabled:opacity-50";
+      ? "inline-flex h-10 items-center rounded-[4px] border border-ember-red px-3 text-[14px] font-bold tracking-[0.038em] text-ember-red disabled:opacity-50"
+      : "inline-flex h-10 items-center rounded-[4px] border border-ash-border px-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink disabled:opacity-50";
   return (
     <button
       type="submit"

@@ -129,7 +129,7 @@ export function ProductForm({
       <p className="text-[14px] text-graphite sm:col-span-2">السعر يُحفظ بالقرش. 100 قرش = 1 جنيه.</p>
       <ProductGalleryField initial={galleryFromImages(product?.images ?? [])} r2Enabled={r2Enabled} />
       <div className="flex items-center gap-3 sm:col-span-2">
-        <LoadingButton type="submit" size="sm" pendingLabel={product ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
+        <LoadingButton type="submit" pendingLabel={product ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {product ? "حفظ التعديل" : "إضافة منتج"}
         </LoadingButton>
         <FormNote state={state} />
@@ -201,7 +201,7 @@ export function CategoryForm({ category, r2Enabled }: { category?: CategoryValue
         </Field>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <LoadingButton type="submit" size="sm" pendingLabel={category ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
+        <LoadingButton type="submit" pendingLabel={category ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {category ? "حفظ الفئة" : "إضافة فئة"}
         </LoadingButton>
         <FormNote state={state} />
@@ -252,7 +252,7 @@ export function BrandForm({ brand, r2Enabled }: { brand?: BrandValues; r2Enabled
         </Field>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <LoadingButton type="submit" size="sm" pendingLabel={brand ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
+        <LoadingButton type="submit" pendingLabel={brand ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {brand ? "حفظ العلامة" : "إضافة علامة"}
         </LoadingButton>
         <FormNote state={state} />
@@ -322,7 +322,7 @@ export function PromotionForm({ promotion }: { promotion?: PromotionValues }) {
         نشط
       </label>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <LoadingButton type="submit" size="sm" pendingLabel={promotion ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
+        <LoadingButton type="submit" pendingLabel={promotion ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {promotion ? "حفظ العرض" : "إضافة عرض"}
         </LoadingButton>
         <FormNote state={state} />
@@ -428,7 +428,7 @@ export function BannerForm({
         </Field>
       </div>
       <div className="flex items-center gap-3 sm:col-span-2">
-        <LoadingButton type="submit" size="sm" pendingLabel={banner ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
+        <LoadingButton type="submit" pendingLabel={banner ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {banner ? "حفظ البانر" : "إضافة بانر"}
         </LoadingButton>
         {state.error ? <p className="text-[14px] text-carbon-ink">{state.error}</p> : null}
@@ -444,7 +444,7 @@ export function MoveBannerForm({ id, direction, disabled }: { id: string; direct
     <form action={action}>
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="direction" value={direction} />
-      <LoadingButton type="submit" size="sm" variant="outline" disabled={disabled} pendingLabel="جارٍ النقل">
+      <LoadingButton type="submit" variant="outline" disabled={disabled} pendingLabel="جارٍ النقل">
         {direction === "up" ? "أعلى" : "أسفل"}
       </LoadingButton>
     </form>

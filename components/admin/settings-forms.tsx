@@ -1,11 +1,21 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import {
+  AdminEmpty,
+  AdminList,
+  AdminListCell,
+  AdminListRow,
+  adminFilterChipClass,
+} from "@/components/admin/admin-ui";
 import { saveAdminNotificationEmails, saveShippingRate, saveWhatsapp } from "@/lib/admin/actions";
 import {
   ADMIN_NOTIFICATION_EMAIL_MESSAGES,
   validateAdminNotificationEmails,
+  type AdminNotificationInbox,
 } from "@/lib/admin/notification-emails";
+import type { AdminShippingRate } from "@/lib/admin/queries";
+import { SHIPPING_BANDS, filterShippingRates, shippingFiltersActive, type ShippingBand } from "@/lib/admin/shipping-filters";
 import { formatMoney } from "@/lib/money";
 import { LoadingButton } from "@/components/loading/loading-button";
 import { Input } from "@/components/ui/input";
@@ -18,11 +28,8 @@ export function WhatsappForm({ number }: { number: string }) {
       <Field label="رقم واتساب">
         <Input name="whatsapp_number" defaultValue={number} placeholder="01xxxxxxxxx" inputMode="tel" />
       </Field>
-      <p className="text-[14px] text-graphite">
-        يُحفظ الرقم في إعدادات المتجر. إذا تُرك بدون صف محفوظ يستخدم المتجر الرقم الاحتياطي من التشغيل، دون عرضه هنا.
-      </p>
       <div className="flex items-center gap-3">
-        <LoadingButton type="submit" size="sm" pendingLabel="جارٍ الحفظ">
+        <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
           حفظ الرقم
         </LoadingButton>
         <FormNote state={state} />
@@ -32,14 +39,14 @@ export function WhatsappForm({ number }: { number: string }) {
 }
 
 export function AdminNotificationEmailsForm({
-  emails,
+  inboxes,
   emptyListSaved,
 }: {
-  emails: string[];
+  inboxes: AdminNotificationInbox[];
   emptyListSaved: boolean;
 }) {
   const [state, action] = useActionState(saveAdminNotificationEmails, initialFormState);
-  const [list, setList] = useState(emails);
+  const [list, setList] = useState(inboxes);
   const [draft, setDraft] = useState("");
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -50,65 +57,90 @@ export function AdminNotificationEmailsForm({
       setLocalError(ADMIN_NOTIFICATION_EMAIL_MESSAGES.empty);
       return;
     }
-    const result = validateAdminNotificationEmails([...list, trimmed]);
+    const result = validateAdminNotificationEmails([...list, { email: trimmed, enabled: true }]);
     if (!result.ok) {
       setLocalError(result.error);
       return;
     }
-    setList(result.emails);
+    setList(result.inboxes);
     setDraft("");
     setPendingRemove(null);
+    setLocalError(null);
+  }
+
+  function toggleEnabled(email: string) {
+    setList((current) =>
+      current.map((inbox) => (inbox.email === email ? { ...inbox, enabled: !inbox.enabled } : inbox))
+    );
     setLocalError(null);
   }
 
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="emails_json" value={JSON.stringify(list)} />
-      <p className="text-[14px] text-graphite">
-        العناوين التي تستقبل إشعارات الطلبات الجديدة عند إتمام العميل للطلب.
-      </p>
       {emptyListSaved && list.length === 0 ? (
         <p className="text-[14px] text-carbon-ink">لن يُرسل إشعار أدمن حتى تضيف عنواناً.</p>
+      ) : null}
+      {list.length > 0 && list.every((inbox) => !inbox.enabled) ? (
+        <p className="text-[14px] text-carbon-ink">كل العناوين معطّلة. لن يُرسل إشعار أدمن بعد الحفظ.</p>
       ) : null}
       {list.length === 0 ? (
         <p className="text-[14px] text-graphite">لا توجد عناوين محفوظة بعد.</p>
       ) : (
         <ul className="space-y-2">
-          {list.map((email) => (
-            <li key={email.toLowerCase()} className="flex flex-wrap items-center justify-between gap-2 border-b border-mist pb-2 last:border-0">
-              <span className="text-[14px] text-carbon-ink" dir="ltr">
-                {email}
+          {list.map((inbox) => (
+            <li
+              key={inbox.email.toLowerCase()}
+              className="flex flex-wrap items-center justify-between gap-2 border-b border-mist pb-2 last:border-0"
+            >
+              <span className={`text-[14px] ${inbox.enabled ? "text-carbon-ink" : "text-graphite"}`} dir="ltr">
+                {inbox.email}
               </span>
-              {pendingRemove === email ? (
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={inbox.enabled}
+                  className={`inline-flex h-10 items-center rounded-[4px] border px-3 text-[14px] font-bold tracking-[0.038em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink ${
+                    inbox.enabled
+                      ? "border-carbon-ink bg-carbon-ink text-paper-white"
+                      : "border-ash-border bg-paper-white text-graphite"
+                  }`}
+                  onClick={() => toggleEnabled(inbox.email)}
+                >
+                  {inbox.enabled ? "تفعيل" : "إيقاف"}
+                </button>
+                {pendingRemove === inbox.email ? (
+                  <>
+                    <button
+                      type="button"
+                      className="inline-flex h-10 items-center rounded-[4px] border border-ash-border px-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
+                      onClick={() => setPendingRemove(null)}
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-10 items-center rounded-[4px] border border-ember-red px-3 text-[14px] font-bold tracking-[0.038em] text-ember-red focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
+                      onClick={() => {
+                        setList((current) => current.filter((item) => item.email !== inbox.email));
+                        setPendingRemove(null);
+                        setLocalError(null);
+                      }}
+                    >
+                      تأكيد الحذف
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
                     className="inline-flex h-10 items-center rounded-[4px] border border-ash-border px-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
-                    onClick={() => setPendingRemove(null)}
+                    onClick={() => setPendingRemove(inbox.email)}
                   >
-                    إلغاء
+                    حذف
                   </button>
-                  <button
-                    type="button"
-                    className="inline-flex h-10 items-center rounded-[4px] border border-ember-red px-3 text-[14px] font-bold tracking-[0.038em] text-ember-red focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
-                    onClick={() => {
-                      setList((current) => current.filter((item) => item !== email));
-                      setPendingRemove(null);
-                      setLocalError(null);
-                    }}
-                  >
-                    تأكيد الحذف
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="inline-flex h-10 items-center rounded-[4px] border border-ash-border px-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
-                  onClick={() => setPendingRemove(email)}
-                >
-                  حذف
-                </button>
-              )}
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -140,6 +172,95 @@ export function AdminNotificationEmailsForm({
   );
 }
 
+const shippingColumns = "lg:grid-cols-[1.4fr_1fr_auto]";
+
+export function ShippingRatesPanel({ rates }: { rates: AdminShippingRate[] }) {
+  const [query, setQuery] = useState("");
+  const [band, setBand] = useState<ShippingBand>("all");
+  const [minPiasters, setMinPiasters] = useState("");
+  const [maxPiasters, setMaxPiasters] = useState("");
+
+  const filtered = useMemo(
+    () => filterShippingRates(rates, { query, band, minPiasters, maxPiasters }),
+    [band, maxPiasters, minPiasters, query, rates]
+  );
+  const filtersActive = shippingFiltersActive({ query, band, minPiasters, maxPiasters });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="بحث بالمحافظة">
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} />
+        </Field>
+        {band === "range" ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="حد أدنى (قرش)">
+              <Input inputMode="numeric" value={minPiasters} onChange={(event) => setMinPiasters(event.target.value)} />
+            </Field>
+            <Field label="حد أقصى (قرش)">
+              <Input inputMode="numeric" value={maxPiasters} onChange={(event) => setMaxPiasters(event.target.value)} />
+            </Field>
+          </div>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {SHIPPING_BANDS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={adminFilterChipClass(band === item.id)}
+            aria-pressed={band === item.id}
+            onClick={() => setBand(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {rates.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[14px] text-graphite">
+            {filtered.length} محافظة من أصل {rates.length}
+          </p>
+          {filtersActive ? (
+            <button
+              type="button"
+              className="inline-flex h-10 items-center rounded-[4px] border border-carbon-ink px-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
+              onClick={() => {
+                setQuery("");
+                setBand("all");
+                setMinPiasters("");
+                setMaxPiasters("");
+              }}
+            >
+              مسح التصفية
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {rates.length === 0 ? (
+        <AdminEmpty>لا توجد محافظات بعد.</AdminEmpty>
+      ) : filtered.length === 0 ? (
+        <AdminEmpty>لا توجد محافظات مطابقة.</AdminEmpty>
+      ) : (
+        <AdminList columns={["المحافظة", "الرسوم", "حفظ"]} gridClass={shippingColumns}>
+          {filtered.map((rate) => (
+            <ShippingRateForm
+              key={rate.id}
+              id={rate.id}
+              governorate={rate.governorate}
+              ratePiasters={rate.rate_piasters}
+            />
+          ))}
+        </AdminList>
+      )}
+      <div className="border-t border-mist pt-4">
+        <h3 className="mb-3 text-[14px] font-bold tracking-[0.038em]">محافظة جديدة</h3>
+        <ShippingRateForm />
+      </div>
+    </div>
+  );
+}
+
 export function ShippingRateForm({
   id,
   governorate,
@@ -153,34 +274,80 @@ export function ShippingRateForm({
   const [rate, setRate] = useState(ratePiasters == null ? "" : String(ratePiasters));
   const parsed = /^\d+$/.test(rate) ? Number(rate) : null;
 
+  const fields = (
+    <>
+      {id ? (
+        <AdminListCell label="المحافظة">
+          <input type="hidden" name="id" value={id} />
+          <p className="flex min-h-10 items-center text-[14px] text-carbon-ink">{governorate}</p>
+        </AdminListCell>
+      ) : (
+        <Field label="المحافظة">
+          <Input name="governorate" required />
+        </Field>
+      )}
+      {id ? (
+        <AdminListCell label="الرسوم">
+          <div className="space-y-1">
+            <Input
+              name="rate_piasters"
+              inputMode="numeric"
+              value={rate}
+              onChange={(event) => setRate(event.target.value)}
+              required
+            />
+            <p className="text-[14px] text-graphite">{parsed == null ? "—" : formatMoney(parsed)}</p>
+          </div>
+        </AdminListCell>
+      ) : (
+        <Field label="الرسوم (قرش)">
+          <Input
+            name="rate_piasters"
+            inputMode="numeric"
+            value={rate}
+            onChange={(event) => setRate(event.target.value)}
+            required
+          />
+        </Field>
+      )}
+      {id ? (
+        <AdminListCell label="حفظ">
+          <div className="flex flex-col items-start gap-2">
+            <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
+              حفظ
+            </LoadingButton>
+            <FormNote state={state} />
+          </div>
+        </AdminListCell>
+      ) : (
+        <div className="flex items-center gap-3 pb-1">
+          <span className="text-[14px] text-graphite">{parsed == null ? "—" : formatMoney(parsed)}</span>
+          <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
+            إضافة
+          </LoadingButton>
+        </div>
+      )}
+      {id ? null : (
+        <div className="sm:col-span-3">
+          <FormNote state={state} />
+        </div>
+      )}
+    </>
+  );
+
+  if (id) {
+    return (
+      <AdminListRow gridClass={shippingColumns}>
+        <form action={action} className="contents">
+          {fields}
+        </form>
+      </AdminListRow>
+    );
+  }
+
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-[1fr_180px_auto] sm:items-end">
-      {id ? <input type="hidden" name="id" value={id} /> : null}
-      <Field label="المحافظة">
-        {id ? (
-          <p className="flex h-10 items-center text-[14px] text-carbon-ink">{governorate}</p>
-        ) : (
-          <Input name="governorate" required />
-        )}
-      </Field>
-      <Field label="الرسوم (قرش)">
-        <Input
-          name="rate_piasters"
-          inputMode="numeric"
-          value={rate}
-          onChange={(event) => setRate(event.target.value)}
-          required
-        />
-      </Field>
-      <div className="flex items-center gap-3 pb-1">
-        <span className="text-[14px] text-graphite">{parsed == null ? "—" : formatMoney(parsed)}</span>
-        <LoadingButton type="submit" size="sm" pendingLabel="جارٍ الحفظ">
-          {id ? "حفظ" : "إضافة"}
-        </LoadingButton>
-      </div>
-      <div className="sm:col-span-3">
-        <FormNote state={state} />
-      </div>
+      {fields}
     </form>
   );
 }

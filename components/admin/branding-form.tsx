@@ -126,7 +126,7 @@ export function BrandingForm({ branding, r2Enabled }: { branding: StorefrontBran
       </div>
 
       <div className="flex items-center gap-3">
-        <LoadingButton type="submit" size="sm" pendingLabel="جارٍ الحفظ">
+        <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
           حفظ الهوية
         </LoadingButton>
         <FormNote state={state} />

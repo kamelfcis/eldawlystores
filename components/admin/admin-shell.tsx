@@ -49,7 +49,7 @@ export function AdminShell({ name, children }: AdminShellProps) {
             <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-[4px] text-carbon-ink hover:bg-fog md:hidden"
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-[4px] text-carbon-ink hover:bg-fog focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink md:hidden"
                 onClick={() => setOpen(true)}
                 aria-label="فتح القائمة"
               >
@@ -57,12 +57,18 @@ export function AdminShell({ name, children }: AdminShellProps) {
               </button>
               <p className="truncate text-[14px] text-carbon-ink">{name}</p>
             </div>
-            <div className="flex shrink-0 items-center gap-4 text-[14px] font-bold tracking-[0.038em]">
-              <Link href="/" className="text-carbon-ink">
+            <div className="flex shrink-0 items-center gap-2 text-[14px] font-bold tracking-[0.038em]">
+              <Link
+                href="/"
+                className="inline-flex h-10 items-center rounded-[4px] border border-carbon-ink px-3 text-carbon-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink"
+              >
                 المتجر
               </Link>
               <form action={logout}>
-                <button type="submit" className="text-graphite hover:text-carbon-ink">
+                <button
+                  type="submit"
+                  className="inline-flex h-10 items-center rounded-[4px] px-3 text-graphite hover:bg-fog hover:text-carbon-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink"
+                >
                   خروج
                 </button>
               </form>
@@ -92,7 +98,7 @@ export function AdminShell({ name, children }: AdminShellProps) {
               </Link>
               <button
                 type="button"
-                className="inline-flex size-9 items-center justify-center rounded-[4px] text-carbon-ink hover:bg-fog"
+                className="inline-flex size-10 items-center justify-center rounded-[4px] text-carbon-ink hover:bg-fog focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-carbon-ink"
                 onClick={() => setOpen(false)}
                 aria-label="إغلاق القائمة"
               >

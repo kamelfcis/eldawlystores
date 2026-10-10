@@ -1,6 +1,6 @@
 import {
   ADMIN_NOTIFICATION_EMAILS_KEY,
-  parseStoredAdminNotificationEmails,
+  parseStoredAdminNotificationInboxes,
   type AdminNotificationConfig,
 } from "@/lib/admin/notification-emails";
 
@@ -20,7 +20,7 @@ export async function loadAdminNotificationConfig(): Promise<AdminNotificationCo
       .maybeSingle();
     if (error) return { state: "unavailable" };
     if (!data) return { state: "missing" };
-    return { state: "saved", emails: parseStoredAdminNotificationEmails(data.value) };
+    return { state: "saved", inboxes: parseStoredAdminNotificationInboxes(data.value) };
   } catch {
     return { state: "unavailable" };
   }

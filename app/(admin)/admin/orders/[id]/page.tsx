@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminEmpty, AdminError, AdminPage, StatusPill, formatAdminTime } from "@/components/admin/admin-ui";
+import {
+  AdminEmpty,
+  AdminError,
+  AdminList,
+  AdminListCell,
+  AdminListRow,
+  AdminPage,
+  StatusPill,
+  formatAdminTime,
+} from "@/components/admin/admin-ui";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { formatMoney } from "@/lib/money";
 import { getAdminOrder } from "@/lib/orders";
@@ -15,6 +24,17 @@ const statusLabels: Record<OrderStatus, string> = {
   rejected: "مرفوض",
 };
 
+const statusColors: Record<OrderStatus, string> = {
+  pending: "#c47b12",
+  confirmed: "#1d4e89",
+  shipped: "#0f6e6b",
+  delivered: "#5c4d8a",
+  cancelled: "#cc2e39",
+  rejected: "#cc2e39",
+};
+
+const itemColumns = "lg:grid-cols-[2fr_1fr_0.8fr_1fr]";
+
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { order, error } = await getAdminOrder(id);
@@ -26,7 +46,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
       action={
         <Link
           href="/admin/orders"
-          className="inline-flex h-10 items-center text-[14px] font-bold tracking-[0.038em] text-carbon-ink"
+          className="inline-flex h-10 items-center rounded-[4px] border border-carbon-ink px-3 text-[14px] font-bold tracking-[0.038em] text-carbon-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
         >
           العودة إلى الطلبات
         </Link>
@@ -42,41 +62,31 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             {order.items.length === 0 ? (
               <p className="mt-3 text-[14px] text-graphite">لا توجد أصناف.</p>
             ) : (
-              <div className="mt-3 overflow-hidden">
-                <div className="hidden grid-cols-[2fr_1fr_0.8fr_1fr] gap-3 border-b border-mist pb-2 text-[14px] font-bold tracking-[0.038em] text-carbon-ink sm:grid">
-                  <span>المنتج</span>
-                  <span>SKU</span>
-                  <span>الكمية</span>
-                  <span>الإجمالي</span>
-                </div>
-                <ul className="divide-y divide-mist">
+              <div className="mt-3">
+                <AdminList columns={["المنتج", "SKU", "الكمية", "الإجمالي"]} gridClass={itemColumns} flush>
                   {order.items.map((item) => {
                     const sku = item.sku.trim() || "—";
                     const lineTotal = item.quantity * item.unitPricePiasters;
                     return (
-                      <li key={item.id} className="grid gap-2 py-3 text-[14px] sm:grid-cols-[2fr_1fr_0.8fr_1fr] sm:items-center">
-                        <div className="min-w-0">
-                          <p className="text-[12px] text-graphite sm:hidden">المنتج</p>
+                      <AdminListRow key={item.id} gridClass={itemColumns}>
+                        <AdminListCell label="المنتج">
                           <p className="break-words text-carbon-ink">{item.productName}</p>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[12px] text-graphite sm:hidden">SKU</p>
+                        </AdminListCell>
+                        <AdminListCell label="SKU">
                           <p className="break-all font-mono text-graphite" dir="ltr">
                             {sku}
                           </p>
-                        </div>
-                        <div>
-                          <p className="text-[12px] text-graphite sm:hidden">الكمية</p>
+                        </AdminListCell>
+                        <AdminListCell label="الكمية">
                           <p className="text-carbon-ink">{item.quantity}</p>
-                        </div>
-                        <div>
-                          <p className="text-[12px] text-graphite sm:hidden">الإجمالي</p>
-                          <p className="text-[14px] text-carbon-ink">{formatMoney(lineTotal)}</p>
-                        </div>
-                      </li>
+                        </AdminListCell>
+                        <AdminListCell label="الإجمالي">
+                          <p className="text-carbon-ink">{formatMoney(lineTotal)}</p>
+                        </AdminListCell>
+                      </AdminListRow>
                     );
                   })}
-                </ul>
+                </AdminList>
               </div>
             )}
           </section>
@@ -136,7 +146,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               <div>
                 <dt className="mb-2 text-graphite">الحالة</dt>
                 <dd>
-                  <StatusPill>{statusLabels[order.status]}</StatusPill>
+                  <StatusPill color={statusColors[order.status]}>{statusLabels[order.status]}</StatusPill>
                 </dd>
               </div>
             </dl>
@@ -151,7 +161,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                 <ul className="mt-3 space-y-3">
                   {order.history.map((entry) => (
                     <li key={entry.id} className="border-b border-mist pb-3 text-[14px] last:border-0">
-                      <StatusPill>{statusLabels[entry.status]}</StatusPill>
+                      <StatusPill color={statusColors[entry.status]}>{statusLabels[entry.status]}</StatusPill>
                       <p className="mt-1 text-graphite">{formatAdminTime(entry.createdAt)}</p>
                       {entry.note ? <p className="mt-1">{entry.note}</p> : null}
                     </li>
