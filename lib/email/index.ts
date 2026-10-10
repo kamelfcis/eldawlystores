@@ -1,7 +1,10 @@
 import { Resend } from "resend";
+import { loadAdminNotificationConfig, resolveAdminNotificationEmails } from "@/lib/admin/notification-emails";
 import { log, logWarn } from "@/lib/logging";
 import { getPublicUrl } from "@/lib/storage";
 import { getStorefrontBranding } from "@/lib/store-settings";
+
+export { parseAdminNotificationEmails } from "@/lib/admin/notification-emails";
 
 export type EmailTemplate =
   | "new-order-admin"
@@ -79,21 +82,6 @@ function isResendConfigured(): boolean {
 function getResendClient(): Resend | null {
   if (!process.env.RESEND_API_KEY) return null;
   return new Resend(process.env.RESEND_API_KEY);
-}
-
-export function parseAdminNotificationEmails(value: string | undefined): string[] {
-  if (!value) return [];
-  const seen = new Set<string>();
-  const emails: string[] = [];
-  for (const part of value.split(",")) {
-    const email = part.trim();
-    if (!email) continue;
-    const key = email.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    emails.push(email);
-  }
-  return emails;
 }
 
 function escapeHtml(value: string): string {
@@ -467,7 +455,12 @@ export async function sendOrderEmail(
 ): Promise<EmailResult> {
   const payload = buildOrderEmailHtml(template, data, await readEmailLogoUrl(template));
   if (template === "new-order-admin") {
-    const admins = parseAdminNotificationEmails(process.env.ADMIN_NOTIFICATION_EMAIL);
+    const resolved = resolveAdminNotificationEmails(await loadAdminNotificationConfig());
+    if (resolved.unavailable) {
+      logWarn("email.settings-unavailable", { template: "new-order-admin" });
+      return { status: "failed", error: "settings unavailable" };
+    }
+    const admins = resolved.emails;
     if (admins.length === 0) {
       logWarn("email.not-configured", { template: "new-order-admin" });
       return { status: "not-configured" };

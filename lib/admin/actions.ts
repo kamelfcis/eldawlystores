@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { arabicDbError } from "@/lib/admin/errors";
+import {
+  ADMIN_NOTIFICATION_EMAILS_KEY,
+  validateAdminNotificationEmails,
+} from "@/lib/admin/notification-emails";
 import { assertAdmin } from "@/lib/auth";
 import { updateAdminOrderStatus } from "@/lib/orders";
 import { createClient } from "@/lib/supabase/server";
@@ -617,6 +621,35 @@ export async function saveStorefrontBranding(_prev: FormState, formData: FormDat
     : await supabase.from("settings").insert({ key: STOREFRONT_BRANDING_KEY, value: payload });
   if (error) return { error: dbMessage(error), saved: false, notice: null };
   revalidatePath("/", "layout");
+  revalidatePath("/admin/settings");
+  return { error: null, saved: true, notice: null };
+}
+
+export async function saveAdminNotificationEmails(_prev: FormState, formData: FormData): Promise<FormState> {
+  const supabase = await adminClient();
+  const raw = readString(formData, "emails_json");
+  let parsed: unknown = [];
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { error: "من فضلك أدخل بريدًا إلكترونيًا صحيحًا.", saved: false, notice: null };
+    }
+  }
+
+  const validated = validateAdminNotificationEmails(parsed);
+  if (!validated.ok) return { error: validated.error, saved: false, notice: null };
+
+  const payload = validated.emails as Json;
+  const existing = await supabase.from("settings").select("key").eq("key", ADMIN_NOTIFICATION_EMAILS_KEY).maybeSingle();
+  if (existing.error) return { error: dbMessage(existing.error), saved: false, notice: null };
+  const { error } = existing.data
+    ? await supabase
+        .from("settings")
+        .update({ value: payload, updated_at: new Date().toISOString() })
+        .eq("key", ADMIN_NOTIFICATION_EMAILS_KEY)
+    : await supabase.from("settings").insert({ key: ADMIN_NOTIFICATION_EMAILS_KEY, value: payload });
+  if (error) return { error: dbMessage(error), saved: false, notice: null };
   revalidatePath("/admin/settings");
   return { error: null, saved: true, notice: null };
 }

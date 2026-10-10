@@ -8,7 +8,7 @@ Resend via `lib/email`. When `RESEND_API_KEY` is unset, emails return `{ status:
 
 | Template ID | Trigger | Recipient |
 |-------------|---------|-----------|
-| `new-order-admin` | Order created | Each distinct address in `ADMIN_NOTIFICATION_EMAIL` (one send per address) |
+| `new-order-admin` | Order created | Each distinct dashboard inbox in `settings.admin_notification_emails`, or the env fallback when that row is missing |
 | `order-confirmed-customer` | Order created | Customer |
 | `order-shipped` | Status → shipped | Customer |
 | `order-delivered` | Status → delivered | Customer |
@@ -22,7 +22,18 @@ RESEND_FROM_EMAIL=orders@yourdomain.com
 ADMIN_NOTIFICATION_EMAIL=admin@yourdomain.com,owner@yourdomain.com
 ```
 
-`ADMIN_NOTIFICATION_EMAIL` is comma-separated. Blank entries are ignored, and a repeated address is sent once. These placeholders are not real inboxes.
+`ADMIN_NOTIFICATION_EMAIL` is the environment fallback only. It is comma-separated. Blank entries are ignored, and a repeated address is sent once. These placeholders are not real inboxes.
+
+Dashboard-managed recipients live in `settings` under the key `admin_notification_emails`. The value is a JSON array of strings, for example `["orders@example.com","ops@example.com"]`. That key is not part of `storefront_branding` and is not publicly readable.
+
+Resolution:
+
+- Missing settings row → use `ADMIN_NOTIFICATION_EMAIL`. Opening `/admin/settings` does not write the fallback into the database.
+- Saved non-empty array → send only those addresses. The environment list is not merged.
+- Saved empty array `[]` → not configured. No message is sent, and the environment list is not restored.
+- A settings read failure is not treated as a saved empty list. The send returns a failed result without calling Resend, and checkout still succeeds.
+
+`new-order-admin` sends one sequential Resend message per remaining distinct address. No Resend call happens when the resolved list is empty. A failed administrative notification does not fail order creation.
 
 The customer confirmation subject stays `تأكيد طلبك #[orderNumber]`. The admin subject stays `طلب جديد #[orderNumber]`. `reply_to` stays `sales@eldawlystores.shop`.
 

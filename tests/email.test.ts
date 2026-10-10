@@ -6,21 +6,31 @@ type SendResult = {
   error: { message: string } | null;
 };
 
-const { sendMock, brandingMock } = vi.hoisted(() => ({
+const { sendMock, brandingMock, maybeSingleMock, insertMock, updateMock, serviceRoleOn } = vi.hoisted(() => ({
   sendMock: vi.fn(
-    async (_payload: {
+    async (payload: {
       from: string;
       to: string;
       subject: string;
       html: string;
       text: string;
       replyTo: string;
-    }): Promise<SendResult> => ({
-      data: { id: "email_test" },
-      error: null,
-    })
+    }): Promise<SendResult> => {
+      void payload;
+      return {
+        data: { id: "email_test" },
+        error: null,
+      };
+    }
   ),
   brandingMock: vi.fn(async () => ({ logoUrl: "" })),
+  maybeSingleMock: vi.fn(async (): Promise<{ data: { value?: unknown } | null; error: { message: string } | null }> => ({
+    data: null,
+    error: null,
+  })),
+  insertMock: vi.fn(),
+  updateMock: vi.fn(),
+  serviceRoleOn: { current: false },
 }));
 
 vi.mock("resend", () => ({
@@ -31,6 +41,33 @@ vi.mock("resend", () => ({
 
 vi.mock("@/lib/store-settings", () => ({
   getStorefrontBranding: brandingMock,
+}));
+
+vi.mock("@/lib/supabase/config", () => ({
+  isSupabaseConfigured: () => serviceRoleOn.current,
+}));
+
+vi.mock("@/lib/supabase/service-role", () => ({
+  isServiceRoleConfigured: () => serviceRoleOn.current,
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createServiceClient: () => ({
+    from: (table: string) => {
+      if (table !== "settings") {
+        throw new Error("unexpected table");
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: maybeSingleMock,
+          }),
+        }),
+        insert: insertMock,
+        update: updateMock,
+      };
+    },
+  }),
 }));
 
 import {
@@ -93,6 +130,11 @@ describe("sendOrderEmail", () => {
     sendMock.mockResolvedValue({ data: { id: "email_test" }, error: null });
     brandingMock.mockReset();
     brandingMock.mockResolvedValue({ logoUrl: "" });
+    maybeSingleMock.mockReset();
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    insertMock.mockReset();
+    updateMock.mockReset();
+    serviceRoleOn.current = false;
     process.env.RESEND_API_KEY = "test-key";
     process.env.RESEND_FROM_EMAIL = "sales@example.com";
   });
@@ -253,6 +295,87 @@ describe("sendOrderEmail", () => {
     expect(html).toContain('alt="EldawlY"');
     expect(html).toContain(">EldawlY</div>");
     expect(html).not.toContain("<script>");
+  });
+
+  it("A uses the env fallback when the settings row is missing and does not write", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "one@example.com, two@example.com";
+    const result = await sendOrderEmail("new-order-admin", orderMail);
+    expect(result.status).toBe("sent");
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(sendMock.mock.calls.map((call) => call[0]?.to)).toEqual(["one@example.com", "two@example.com"]);
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("B uses saved database recipients only and does not merge env", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: { value: ["saved@example.com", "ops@example.com"] }, error: null });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "env-one@example.com, env-two@example.com";
+    await sendOrderEmail("new-order-admin", orderMail);
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(sendMock.mock.calls.map((call) => call[0]?.to)).toEqual(["saved@example.com", "ops@example.com"]);
+  });
+
+  it("C does not restore a deleted env address after a saved list", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: { value: ["kept@example.com"] }, error: null });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "kept@example.com, deleted@example.com";
+    await sendOrderEmail("new-order-admin", orderMail);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock.mock.calls[0]?.[0]?.to).toBe("kept@example.com");
+  });
+
+  it("D treats a saved empty array as not-configured and does not send", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: { value: [] }, error: null });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "one@example.com, two@example.com";
+    const result = await sendOrderEmail("new-order-admin", orderMail);
+    expect(result.status).toBe("not-configured");
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("E returns not-configured when both the row and env are empty", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    process.env.ADMIN_NOTIFICATION_EMAIL = " , ";
+    const result = await sendOrderEmail("new-order-admin", orderMail);
+    expect(result.status).toBe("not-configured");
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("F sends two sequential messages for two distinct recipients", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: { value: ["first@example.com", "second@example.com"] }, error: null });
+    const order: string[] = [];
+    sendMock.mockImplementation(async (payload: { to: string }) => {
+      order.push(payload.to);
+      return { data: { id: `email_${payload.to}` }, error: null };
+    });
+    await sendOrderEmail("new-order-admin", orderMail);
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(order).toEqual(["first@example.com", "second@example.com"]);
+  });
+
+  it("G keeps first-seen casing and order after case-insensitive dedupe", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({
+      data: { value: [" Orders@example.com ", "", "ops@example.com", "orders@example.com"] },
+      error: null,
+    });
+    await sendOrderEmail("new-order-admin", orderMail);
+    expect(sendMock.mock.calls.map((call) => call[0]?.to)).toEqual(["Orders@example.com", "ops@example.com"]);
+  });
+
+  it("H does not treat a settings read failure as a saved empty list", async () => {
+    serviceRoleOn.current = true;
+    maybeSingleMock.mockResolvedValue({ data: null, error: { message: "timeout" } });
+    process.env.ADMIN_NOTIFICATION_EMAIL = "one@example.com, two@example.com";
+    const result = await sendOrderEmail("new-order-admin", orderMail);
+    expect(result).toEqual({ status: "failed", error: "settings unavailable" });
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(result.status).not.toBe("not-configured");
   });
 });
 

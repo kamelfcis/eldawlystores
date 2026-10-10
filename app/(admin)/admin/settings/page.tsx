@@ -1,6 +1,7 @@
 import { AdminError, AdminPage } from "@/components/admin/admin-ui";
 import { BrandingForm } from "@/components/admin/branding-form";
-import { ShippingRateForm, WhatsappForm } from "@/components/admin/settings-forms";
+import { AdminNotificationEmailsForm, ShippingRateForm, WhatsappForm } from "@/components/admin/settings-forms";
+import { formEmailsFromAdminSetting } from "@/lib/admin/notification-emails";
 import { formatMoney } from "@/lib/money";
 import { getAdminSettings } from "@/lib/admin/queries";
 import { isR2Configured } from "@/lib/storage";
@@ -8,8 +9,12 @@ import { isR2Configured } from "@/lib/storage";
 export const metadata = { title: "الإعدادات" };
 
 export default async function AdminSettingsPage() {
-  const { whatsapp, branding, rates, error } = await getAdminSettings();
+  const { whatsapp, branding, adminNotificationEmails, rates, error } = await getAdminSettings();
   const r2Enabled = isR2Configured();
+  const notificationForm = formEmailsFromAdminSetting(
+    adminNotificationEmails,
+    process.env.ADMIN_NOTIFICATION_EMAIL
+  );
 
   return (
     <AdminPage title="الإعدادات">
@@ -22,6 +27,12 @@ export default async function AdminSettingsPage() {
       <section className="rounded-[8px] border border-mist bg-paper-white p-4">
         <h2 className="mb-3 text-[14px] font-bold tracking-[0.038em]">واتساب</h2>
         <WhatsappForm number={whatsapp ?? ""} />
+        <h2 className="mb-3 mt-8 text-[14px] font-bold tracking-[0.038em]">إيميلات إشعارات الطلبات</h2>
+        <AdminNotificationEmailsForm
+          key={`${notificationForm.emptyListSaved}:${notificationForm.emails.join("|")}`}
+          emails={notificationForm.emails}
+          emptyListSaved={notificationForm.emptyListSaved}
+        />
       </section>
       <section className="space-y-4 rounded-[8px] border border-mist bg-paper-white p-4">
         <h2 className="text-[14px] font-bold tracking-[0.038em]">رسوم الشحن</h2>

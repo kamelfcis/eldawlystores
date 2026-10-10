@@ -1,6 +1,11 @@
 import { arabicDbError } from "@/lib/admin/errors";
 import { assertAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import {
+  ADMIN_NOTIFICATION_EMAILS_KEY,
+  readAdminNotificationEmailsSetting,
+  type AdminNotificationEmailsSetting,
+} from "@/lib/admin/notification-emails";
 import { parseStorefrontBranding, STOREFRONT_BRANDING_KEY } from "@/lib/store-branding";
 import { readWhatsappValue } from "@/lib/store-settings";
 import type { Database, ProductStatus } from "@/lib/types/database";
@@ -317,17 +322,25 @@ export async function getAdminSettings() {
   await assertAdmin();
   const supabase = await createClient();
   const [settingsResult, ratesResult] = await Promise.all([
-    supabase.from("settings").select("key, value").in("key", ["whatsapp_number", STOREFRONT_BRANDING_KEY]),
+    supabase
+      .from("settings")
+      .select("key, value")
+      .in("key", ["whatsapp_number", STOREFRONT_BRANDING_KEY, ADMIN_NOTIFICATION_EMAILS_KEY]),
     supabase.from("shipping_rates").select("id, governorate, rate_piasters").order("governorate"),
   ]);
 
   const rows = settingsResult.data ?? [];
   const whatsappRow = rows.find((row) => row.key === "whatsapp_number");
   const brandingRow = rows.find((row) => row.key === STOREFRONT_BRANDING_KEY);
+  const notificationRow = rows.find((row) => row.key === ADMIN_NOTIFICATION_EMAILS_KEY);
+  const adminNotificationEmails: AdminNotificationEmailsSetting = settingsResult.error
+    ? { kind: "unavailable" }
+    : readAdminNotificationEmailsSetting(notificationRow);
 
   return {
     whatsapp: readWhatsappValue(whatsappRow?.value),
     branding: parseStorefrontBranding(brandingRow?.value),
+    adminNotificationEmails,
     rates: (ratesResult.data ?? []) as AdminShippingRate[],
     error: arabicDbError(settingsResult.error) ?? arabicDbError(ratesResult.error),
   };
