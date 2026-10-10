@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ReorderButton } from "@/components/account/reorder-button";
+import { OrderStatusChip } from "@/components/account/order-status-chip";
 import { getSessionRole } from "@/lib/auth";
+import { ORDER_STATUS_LABELS } from "@/lib/account/order-status";
 import { formatMoney } from "@/lib/money";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -8,17 +11,16 @@ import type { OrderStatus } from "@/lib/types/database";
 
 export const metadata = { title: "تفاصيل الطلب" };
 
-const statusLabels: Record<OrderStatus, string> = {
-  pending: "معلق",
-  confirmed: "مؤكد",
-  shipped: "تم الشحن",
-  delivered: "تم التسليم",
-  cancelled: "ملغي",
-  rejected: "مرفوض",
-};
-
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
+}
+
+function formatOrderDate(value: string): string {
+  return new Date(value).toLocaleDateString("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
@@ -38,7 +40,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       .maybeSingle(),
     supabase
       .from("order_items")
-      .select("id, product_name, quantity, unit_price_piasters")
+      .select("id, variant_id, product_name, quantity, unit_price_piasters")
       .eq("order_id", id),
     supabase
       .from("order_status_history")
@@ -52,31 +54,51 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const order = orderResult.data;
   const items = itemsResult.data ?? [];
   const history = historyResult.error ? [] : (historyResult.data ?? []);
+  const status = order.status as OrderStatus;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">تفاصيل الطلب</h1>
-        <Link href="/account/orders" className="text-[14px] text-graphite hover:text-carbon-ink hover:underline">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-retail-ink">تفاصيل الطلب</h1>
+        <Link
+          href="/account/orders"
+          className="rounded-[4px] text-[14px] text-graphite hover:text-carbon-ink hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
+        >
           العودة للطلبات
         </Link>
       </div>
 
-      <div className="rounded-[8px] border border-mist p-4 text-sm">
-        <p>
-          رقم الطلب: <span className="font-mono font-bold">{order.order_number}</span>
+      <div className="rounded-[8px] border border-retail-line bg-paper-white p-4 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <p>
+            رقم الطلب:{" "}
+            <span dir="ltr" className="font-mono font-bold text-retail-ink">
+              {order.order_number}
+            </span>
+          </p>
+          <OrderStatusChip status={status} />
+        </div>
+        <p className="mt-2 text-graphite">
+          التاريخ:{" "}
+          <time dateTime={order.created_at}>{formatOrderDate(order.created_at)}</time>
         </p>
-        <p className="mt-1 text-graphite">الحالة: {statusLabels[order.status as OrderStatus] ?? order.status}</p>
-        <p className="mt-1 text-graphite">الإجمالي: {formatMoney(order.total_piasters)}</p>
+        <p className="mt-1 font-bold text-retail-ink">الإجمالي: {formatMoney(order.total_piasters)}</p>
+        <div className="mt-4">
+          <ReorderButton orderId={order.id} />
+        </div>
       </div>
 
       <section>
-        <h2 className="mb-3 text-[16px] font-bold">المنتجات</h2>
+        <h2 className="mb-3 text-[16px] font-bold text-retail-ink">المنتجات</h2>
         <ul className="space-y-2 text-sm">
           {items.map((item) => (
             <li key={item.id} className="flex justify-between gap-4 border-b border-mist pb-2">
-              <span>{item.product_name} × {item.quantity}</span>
-              <span>{formatMoney(item.unit_price_piasters * item.quantity)}</span>
+              <span>
+                {item.product_name} × {item.quantity}
+              </span>
+              <span className="font-bold text-retail-ink">
+                {formatMoney(item.unit_price_piasters * item.quantity)}
+              </span>
             </li>
           ))}
         </ul>
@@ -84,13 +106,16 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
       {history.length > 0 ? (
         <section>
-          <h2 className="mb-3 text-[16px] font-bold">سجل الحالة</h2>
+          <h2 className="mb-3 text-[16px] font-bold text-retail-ink">سجل الحالة</h2>
           <ol className="relative space-y-4 border-s border-mist ps-4">
             {history.map((entry) => (
               <li key={entry.id} className="relative">
-                <span aria-hidden className="absolute -start-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-carbon-ink" />
+                <span
+                  aria-hidden
+                  className="absolute -start-[21px] top-1.5 h-2.5 w-2.5 rounded-full bg-carbon-ink"
+                />
                 <p className="text-[14px] font-bold text-retail-ink">
-                  {statusLabels[entry.status as OrderStatus] ?? entry.status}
+                  {ORDER_STATUS_LABELS[entry.status as OrderStatus] ?? entry.status}
                 </p>
                 <p className="text-[12px] text-graphite">
                   {new Date(entry.created_at).toLocaleString("ar-EG")}

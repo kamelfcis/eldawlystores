@@ -1,13 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/components/cart/cart-provider";
+import { REORDER_NOTICE_STORAGE_KEY } from "@/lib/account/reorder";
 import { formatMoney } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 
 export default function CartPage() {
   const { cart, totalPiasters, updateQuantity, removeItem } = useCart();
+  const [reorderNotice, setReorderNotice] = useState("");
+
+  useEffect(() => {
+    const notice = sessionStorage.getItem(REORDER_NOTICE_STORAGE_KEY);
+    if (!notice) return;
+    sessionStorage.removeItem(REORDER_NOTICE_STORAGE_KEY);
+    setReorderNotice(notice);
+  }, []);
 
   if (cart.items.length === 0) {
     return (
@@ -23,6 +33,11 @@ export default function CartPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">سلة التسوق</h1>
+      {reorderNotice ? (
+        <p role="status" className="rounded-[8px] border border-retail-line bg-fog px-4 py-3 text-[14px] text-graphite">
+          {reorderNotice}
+        </p>
+      ) : null}
 
       <div className="space-y-4">
         {cart.items.map((item) => (
