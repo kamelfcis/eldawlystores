@@ -1,5 +1,6 @@
 import { Resend } from "resend";
-import { loadAdminNotificationConfig, resolveAdminNotificationEmails } from "@/lib/admin/notification-emails";
+import { loadAdminNotificationConfig } from "@/lib/admin/notification-emails-server";
+import { resolveAdminNotificationEmails } from "@/lib/admin/notification-emails";
 import { log, logWarn } from "@/lib/logging";
 import { getPublicUrl } from "@/lib/storage";
 import { getStorefrontBranding } from "@/lib/store-settings";

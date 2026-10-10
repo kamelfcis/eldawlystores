@@ -61,6 +61,7 @@ describe("admin notification settings privacy", () => {
     expect(settingsForms).not.toContain("window.confirm");
     expect(settingsForms).not.toContain("alert(");
     expect(storeSettings).not.toContain("admin_notification_emails");
+    expect(readFileSync("lib/admin/notification-emails.ts", "utf8")).not.toContain("supabase/server");
     expect(publicPolicy).toContain("whatsapp_number");
     expect(publicPolicy).toContain("storefront_branding");
     expect(publicPolicy).not.toContain("admin_notification_emails");
