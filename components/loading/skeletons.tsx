@@ -1,6 +1,26 @@
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
+export function HeaderSkeleton() {
+  return (
+    <Status label="جارٍ تحميل القائمة">
+      <div className="border-b border-mist bg-paper-white">
+        <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center px-4">
+          <Skeleton className="relative z-10 size-11 shrink-0 rounded-[4px] lg:hidden" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-0 flex h-16 items-center justify-center lg:hidden">
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <Skeleton className="hidden h-8 w-36 shrink-0 lg:block" />
+          <div className="relative z-10 ms-auto flex items-center gap-2">
+            <Skeleton className="size-11 lg:hidden" />
+            <Skeleton className="size-11" />
+          </div>
+        </div>
+      </div>
+    </Status>
+  );
+}
+
 function Status({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div aria-busy="true" role="status" aria-live="polite">

@@ -7,6 +7,7 @@ import { logout } from "@/lib/auth/actions";
 import type { AccountMenu } from "@/lib/auth";
 import type { Brand, Category } from "@/lib/types/database";
 import { CategoryMegaMenu } from "@/components/layout/category-mega-menu";
+import { MobileStoreDrawer } from "@/components/layout/mobile-store-drawer";
 import { StoreLogo } from "@/components/layout/store-logo";
 import { CartDrawerTrigger } from "@/components/cart/cart-drawer";
 import { DesktopSearchForm, MobileSearchDialog } from "@/components/layout/mobile-search-dialog";
@@ -26,9 +27,8 @@ export function Header({
   return (
     <header className="border-b border-mist bg-paper-white">
       <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center gap-3 px-4 sm:gap-6">
-        <div className="relative z-10 flex shrink-0 items-center lg:hidden">
-          <MobileSearchDialog />
-          <CategoryMegaMenu categories={categories} brandsByCategory={brandsByCategory} placement="mobile" />
+        <div className="relative z-10 shrink-0 lg:hidden">
+          <MobileStoreDrawer account={account} categories={categories} brandsByCategory={brandsByCategory} />
         </div>
 
         <div className="pointer-events-none absolute inset-x-0 top-0 z-0 flex h-16 items-center justify-center lg:hidden">
@@ -42,7 +42,7 @@ export function Header({
         </div>
 
         <div className="hidden lg:block">
-          <CategoryMegaMenu categories={categories} brandsByCategory={brandsByCategory} placement="desktop" />
+          <CategoryMegaMenu categories={categories} />
         </div>
 
         <div className="hidden min-w-0 flex-1 lg:block">
@@ -50,8 +50,9 @@ export function Header({
         </div>
 
         <div className="relative z-10 ms-auto flex items-center gap-0.5 lg:ms-0">
-          <div className="lg:hidden">
-            <CartDrawerTrigger />
+          <div className="flex items-center lg:hidden">
+            <MobileSearchDialog />
+            <CartDrawerTrigger className="relative inline-flex size-11 items-center justify-center text-carbon-ink hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink" />
           </div>
           <div className="hidden items-center gap-1 lg:flex">
             <ThemeToggle />

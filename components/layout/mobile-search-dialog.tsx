@@ -20,7 +20,7 @@ export function MobileSearchDialog() {
     <>
       <button
         type="button"
-        className="p-2 text-carbon-ink hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink lg:hidden"
+        className="inline-flex size-11 items-center justify-center text-carbon-ink hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink lg:hidden"
         aria-label="بحث"
         onClick={() => setOpen(true)}
       >

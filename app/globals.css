@@ -314,6 +314,19 @@ body {
     box-shadow var(--motion-normal) var(--motion-ease);
 }
 
+@keyframes store-drawer-in {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.store-drawer-sheet {
+  animation: store-drawer-in var(--motion-normal) var(--motion-ease);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .product-card-lift:hover,
   .product-card-lift:focus-within {
@@ -332,7 +345,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .hero-panel-enter,
-  .hero-image-enter {
+  .hero-image-enter,
+  .store-drawer-sheet {
     animation: none;
   }
 

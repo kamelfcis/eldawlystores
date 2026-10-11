@@ -1,11 +1,30 @@
+import { Suspense } from "react";
 import { getBanners, getCategories, getCategoryBrandMap } from "@/lib/catalog";
 import { getAccountMenu } from "@/lib/auth";
 import { getStorefrontBranding } from "@/lib/store-settings";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { CategoryStrip } from "@/components/layout/category-strip";
 import { Header } from "@/components/layout/header";
+import { HeaderSkeleton } from "@/components/loading/skeletons";
 
-export async function SiteHeader() {
+export function SiteHeader() {
+  return (
+    <Suspense fallback={<SiteHeaderFallback />}>
+      <SiteHeaderReady />
+    </Suspense>
+  );
+}
+
+function SiteHeaderFallback() {
+  return (
+    <div className="sticky top-0 z-40">
+      <div className="h-12 bg-carbon-ink" />
+      <HeaderSkeleton />
+    </div>
+  );
+}
+
+async function SiteHeaderReady() {
   const [banners, categories, brandsByCategory, account, branding] = await Promise.all([
     getBanners(),
     getCategories(),
