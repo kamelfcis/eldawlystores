@@ -302,7 +302,7 @@ export async function deleteProduct(_prev: FormState, formData: FormData): Promi
   }
   if (error) return { error: dbMessage(error), saved: false, notice: null };
   revalidateCatalog();
-  redirect("/admin/products");
+  redirect("/admin/products?notice=product-deleted");
 }
 
 function readCategory(formData: FormData):

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { notify } from "@/lib/feedback/notify";
 import { getGovernorates } from "@/lib/promotions";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -199,6 +200,7 @@ export default function AddressesPage() {
 
       await loadAddresses(userId);
       closeForm();
+      notify.success("تم حفظ العنوان");
     } catch {
       setFormError(SAVE_ERROR);
     } finally {
@@ -227,6 +229,7 @@ export default function AddressesPage() {
 
       await loadAddresses(userId);
       if (editingId === address.id) closeForm();
+      notify.success("تم حذف العنوان");
     } catch {
       setFormError(SAVE_ERROR);
     }
@@ -245,6 +248,7 @@ export default function AddressesPage() {
         .eq("user_id", userId);
       if (error) throw new Error("default");
       await loadAddresses(userId);
+      notify.success("تم تعيين العنوان الافتراضي");
     } catch {
       setFormError(SAVE_ERROR);
     }

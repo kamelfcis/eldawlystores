@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GOOGLE_AUTH_UNAVAILABLE, authErrorMessage } from "@/lib/auth/errors";
+import { notify } from "@/lib/feedback/notify";
 import { continueWithGoogle } from "@/lib/auth/google";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -14,7 +15,7 @@ export function LoginForm({ callbackFailed }: { callbackFailed: boolean }) {
   const [error, setError] = useState(callbackFailed ? GOOGLE_AUTH_UNAVAILABLE : "");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [signedIn, setSignedIn] = useState("");
+  const [redirecting, setRedirecting] = useState(false);
   const redirectTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -44,16 +45,14 @@ export function LoginForm({ callbackFailed }: { callbackFailed: boolean }) {
       }
 
       let destination = "/account";
-      let label = data.user.email?.trim() || email;
-      const [{ data: roleRow }, { data: profile }] = await Promise.all([
+      const [{ data: roleRow }] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", data.user.id).maybeSingle(),
         supabase.from("profiles").select("full_name").eq("id", data.user.id).maybeSingle(),
       ]);
-      const name = profile?.full_name?.trim();
-      if (name) label = name;
       if (roleRow?.role === "admin") destination = "/admin";
 
-      setSignedIn(label);
+      notify.success("تم تسجيل الدخول");
+      setRedirecting(true);
       redirectTimer.current = window.setTimeout(() => {
         window.location.assign(destination);
       }, 1200);
@@ -77,13 +76,11 @@ export function LoginForm({ callbackFailed }: { callbackFailed: boolean }) {
   return (
     <div className="mx-auto max-w-md space-y-6 py-8">
       <h1 className="text-center text-[28px] font-bold text-retail-ink">تسجيل الدخول</h1>
-      {signedIn ? (
-        <div role="status" className="rounded-[8px] border border-mist bg-paper-white px-4 py-4">
-          <p className="text-[16px] font-bold text-carbon-ink">تم تسجيل الدخول</p>
-          <p className="mt-1 text-[14px] text-graphite">{signedIn}</p>
-        </div>
-      ) : null}
-      {signedIn ? null : (
+      {redirecting ? (
+        <p role="status" className="text-center text-[14px] text-graphite">
+          جاري التحويل...
+        </p>
+      ) : (
         <>
           <form onSubmit={handleLogin} className="space-y-4">
             <Input type="email" placeholder="البريد الإلكتروني" value={email} onChange={(e) => setEmail(e.target.value)} required />

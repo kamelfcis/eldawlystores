@@ -7,6 +7,7 @@ import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useCart } from "@/components/cart/cart-provider";
+import { notify } from "@/lib/feedback/notify";
 import { ProductPrice, stockLabel } from "@/components/product/product-price";
 import { WishlistButton } from "@/components/wishlist/wishlist-button";
 import { CompareButton } from "@/components/compare/compare-button";
@@ -37,6 +38,7 @@ function QuickAdd({ product, className }: { product: ProductWithDetails; classNa
           imageUrl: product.images[0]?.url ?? "/placeholder-product.svg",
           stock: variant.stock,
         });
+        notify.success("أُضيف إلى السلة");
         setAdded(true);
         window.setTimeout(() => setAdded(false), 1600);
       }}

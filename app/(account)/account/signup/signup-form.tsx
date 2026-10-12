@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authErrorMessage } from "@/lib/auth/errors";
+import { notify } from "@/lib/feedback/notify";
 import { continueWithGoogle } from "@/lib/auth/google";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -13,7 +14,6 @@ export function SignupForm() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -21,7 +21,6 @@ export function SignupForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setNotice("");
 
     if (!isSupabaseConfigured()) {
       setError("التسجيل غير متاح — Supabase غير مُعد");
@@ -49,7 +48,7 @@ export function SignupForm() {
       if (data.session) {
         await supabase.auth.signOut();
       }
-      setNotice("تم إنشاء الحساب. تحقق من بريدك الإلكتروني لتأكيد الحساب.");
+      notify.info("تم إنشاء الحساب. تحقق من بريدك الإلكتروني لتأكيد الحساب.");
     } catch {
       setError(authErrorMessage(null));
     } finally {
@@ -59,7 +58,6 @@ export function SignupForm() {
 
   async function handleGoogleLogin() {
     setError("");
-    setNotice("");
     setGoogleLoading(true);
     try {
       await continueWithGoogle(setError);
@@ -75,7 +73,6 @@ export function SignupForm() {
         <Input placeholder="الاسم الكامل" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
         <Input type="email" placeholder="البريد الإلكتروني" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <Input type="password" placeholder="كلمة المرور (8 أحرف على الأقل)" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
-        {notice && <p className="text-sm text-carbon-ink">{notice}</p>}
         {error && <p className="text-ember-red text-sm">{error}</p>}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "جاري التسجيل..." : "إنشاء حساب"}

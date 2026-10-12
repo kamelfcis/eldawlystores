@@ -2,6 +2,7 @@
 
 import { Heart } from "lucide-react";
 import { useWishlist } from "@/components/wishlist/wishlist-provider";
+import { notify } from "@/lib/feedback/notify";
 import { cn } from "@/lib/utils/cn";
 
 export function WishlistButton({
@@ -26,6 +27,7 @@ export function WishlistButton({
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
+        notify.success(saved ? "أُزيل من المفضلة" : "أُضيف إلى المفضلة");
         toggle(productId);
       }}
     >

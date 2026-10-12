@@ -19,10 +19,12 @@ import { SHIPPING_BANDS, filterShippingRates, shippingFiltersActive, type Shippi
 import { piastersToPounds } from "@/lib/money";
 import { LoadingButton } from "@/components/loading/loading-button";
 import { Input } from "@/components/ui/input";
-import { Field, FormNote, initialFormState } from "./form-bits";
+import { useFormToast } from "@/lib/feedback/use-form-toast";
+import { Field, initialFormState } from "./form-bits";
 
 export function WhatsappForm({ number }: { number: string }) {
   const [state, action] = useActionState(saveWhatsapp, initialFormState);
+  useFormToast(state, "تم الحفظ");
   return (
     <form action={action} className="space-y-3">
       <Field label="رقم واتساب">
@@ -32,7 +34,6 @@ export function WhatsappForm({ number }: { number: string }) {
         <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
           حفظ الرقم
         </LoadingButton>
-        <FormNote state={state} />
       </div>
     </form>
   );
@@ -46,6 +47,7 @@ export function AdminNotificationEmailsForm({
   emptyListSaved: boolean;
 }) {
   const [state, action] = useActionState(saveAdminNotificationEmails, initialFormState);
+  useFormToast(state, "تم الحفظ");
   const [list, setList] = useState(inboxes);
   const [draft, setDraft] = useState("");
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
@@ -188,7 +190,6 @@ export function AdminNotificationEmailsForm({
         <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
           حفظ القائمة
         </LoadingButton>
-        <FormNote state={state} />
       </div>
       {localError ? <p className="text-[14px] text-carbon-ink">{localError}</p> : null}
     </form>
@@ -304,6 +305,7 @@ export function ShippingRateForm({
   ratePiasters?: number;
 }) {
   const [state, action] = useActionState(saveShippingRate, initialFormState);
+  useFormToast(state, "تم الحفظ");
   const [rate, setRate] = useState(ratePiasters == null ? "" : String(piastersToPounds(ratePiasters)));
 
   const rateField = (
@@ -345,7 +347,6 @@ export function ShippingRateForm({
             <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
               حفظ
             </LoadingButton>
-            <FormNote state={state} />
           </div>
         </AdminListCell>
       ) : (
@@ -353,11 +354,6 @@ export function ShippingRateForm({
           <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
             إضافة
           </LoadingButton>
-        </div>
-      )}
-      {id ? null : (
-        <div className="sm:col-span-3">
-          <FormNote state={state} />
         </div>
       )}
     </>

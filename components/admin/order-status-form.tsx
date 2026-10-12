@@ -4,7 +4,8 @@ import { useActionState } from "react";
 import { saveAdminOrderStatus } from "@/lib/admin/actions";
 import type { OrderStatus } from "@/lib/types/database";
 import { LoadingButton } from "@/components/loading/loading-button";
-import { FormNote, initialFormState, selectClass } from "./form-bits";
+import { useFormToast } from "@/lib/feedback/use-form-toast";
+import { initialFormState, selectClass } from "./form-bits";
 
 const statusLabels: Record<OrderStatus, string> = {
   pending: "معلق",
@@ -17,6 +18,7 @@ const statusLabels: Record<OrderStatus, string> = {
 
 export function OrderStatusForm({ orderId, status }: { orderId: string; status: OrderStatus }) {
   const [state, action] = useActionState(saveAdminOrderStatus, initialFormState);
+  useFormToast(state, "تم تحديث حالة الطلب");
 
   return (
     <form action={action} className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -31,7 +33,6 @@ export function OrderStatusForm({ orderId, status }: { orderId: string; status: 
       <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
         حفظ
       </LoadingButton>
-      <FormNote state={state} />
     </form>
   );
 }

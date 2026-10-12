@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import Link from "next/link";
+import { QueryNoticeToast } from "@/components/admin/query-notice-toast";
 import { ArchiveProductForm, DeleteProductForm, ProductForm } from "@/components/admin/catalog-forms";
 import {
   AdminEmpty,
@@ -72,6 +74,10 @@ export default async function AdminProductsPage({
   }
 
   return (
+    <>
+      <Suspense fallback={null}>
+        <QueryNoticeToast />
+      </Suspense>
     <AdminPage
       title="المنتجات"
       action={
@@ -254,5 +260,6 @@ export default async function AdminProductsPage({
         </AdminList>
       )}
     </AdminPage>
+    </>
   );
 }

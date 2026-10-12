@@ -47,10 +47,12 @@ describe("admin order detail markup", () => {
 });
 
 describe("order status form", () => {
-  it("uses h-10 controls and a single FormNote", () => {
+  it("uses h-10 controls and useFormToast instead of FormNote", () => {
     expect(statusForm).toContain("h-10");
     expect(statusForm).not.toContain("h-8");
-    expect(statusForm.match(/<FormNote/g)).toHaveLength(1);
+    expect(statusForm).not.toContain("FormNote");
+    expect(statusForm).toContain("useFormToast");
+    expect(statusForm).toContain("تم تحديث حالة الطلب");
   });
 });
 

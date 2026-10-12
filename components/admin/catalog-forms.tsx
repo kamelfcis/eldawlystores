@@ -3,8 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { LoadingButton } from "@/components/loading/loading-button";
+import { useFormToast } from "@/lib/feedback/use-form-toast";
 import { Input } from "@/components/ui/input";
 import {
   archiveProduct,
@@ -19,12 +19,11 @@ import {
   saveCategory,
   saveProduct,
   savePromotion,
-  type FormState,
 } from "@/lib/admin/actions";
 import { formatMoney, piastersToPounds } from "@/lib/money";
 import type { BannerType, ProductStatus } from "@/lib/types/database";
 import { ImageUrlField } from "./image-url-field";
-import { ConfirmButton, Field, FormNote, initialFormState, selectClass } from "./form-bits";
+import { ConfirmButton, Field, initialFormState, selectClass } from "./form-bits";
 import { ProductGalleryField, galleryFromImages } from "./product-gallery";
 
 export interface AdminOption {
@@ -62,6 +61,7 @@ export function ProductForm({
   view: "cards" | "table";
 }) {
   const [state, action] = useActionState(saveProduct, initialFormState);
+  useFormToast(state, "تم حفظ المنتج");
   const queryClient = useQueryClient();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -132,7 +132,6 @@ export function ProductForm({
         <LoadingButton type="submit" pendingLabel={product ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {product ? "حفظ التعديل" : "إضافة منتج"}
         </LoadingButton>
-        <FormNote state={state} />
       </div>
     </form>
   );
@@ -140,24 +139,24 @@ export function ProductForm({
 
 export function ArchiveProductForm({ productId }: { productId: string }) {
   const [state, action] = useActionState(archiveProduct, initialFormState);
+  useFormToast(state, "تم أرشفة المنتج");
   return (
     <form action={action} className="space-y-1">
       <input type="hidden" name="productId" value={productId} />
       <ConfirmButton message="أرشفة هذا المنتج؟" variant="quiet">
         أرشفة
       </ConfirmButton>
-      <FormNote state={state} />
     </form>
   );
 }
 
 export function DeleteProductForm({ productId }: { productId: string }) {
   const [state, action] = useActionState(deleteProduct, initialFormState);
+  useFormToast(state, "تم حذف المنتج");
   return (
     <form action={action} className="space-y-1">
       <input type="hidden" name="productId" value={productId} />
       <ConfirmButton message="حذف هذا المنتج؟ إذا كان مرتبطاً بطلبات ستتم أرشفته.">حذف</ConfirmButton>
-      <FormNote state={state} />
     </form>
   );
 }
@@ -173,6 +172,7 @@ export interface CategoryValues {
 
 export function CategoryForm({ category, r2Enabled }: { category?: CategoryValues; r2Enabled: boolean }) {
   const [state, action] = useActionState(saveCategory, initialFormState);
+  useFormToast(state, "تم حفظ الفئة");
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {category ? <input type="hidden" name="id" value={category.id} /> : null}
@@ -204,7 +204,6 @@ export function CategoryForm({ category, r2Enabled }: { category?: CategoryValue
         <LoadingButton type="submit" pendingLabel={category ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {category ? "حفظ الفئة" : "إضافة فئة"}
         </LoadingButton>
-        <FormNote state={state} />
       </div>
     </form>
   );
@@ -212,11 +211,11 @@ export function CategoryForm({ category, r2Enabled }: { category?: CategoryValue
 
 export function DeleteCategoryForm({ id }: { id: string }) {
   const [state, action] = useActionState(deleteCategory, initialFormState);
+  useFormToast(state, "تم حذف الفئة");
   return (
     <form action={action} className="space-y-1">
       <input type="hidden" name="id" value={id} />
       <ConfirmButton message="حذف هذه الفئة؟">حذف</ConfirmButton>
-      <FormNote state={state} />
     </form>
   );
 }
@@ -230,6 +229,7 @@ export interface BrandValues {
 
 export function BrandForm({ brand, r2Enabled }: { brand?: BrandValues; r2Enabled: boolean }) {
   const [state, action] = useActionState(saveBrand, initialFormState);
+  useFormToast(state, "تم حفظ العلامة");
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {brand ? <input type="hidden" name="id" value={brand.id} /> : null}
@@ -255,7 +255,6 @@ export function BrandForm({ brand, r2Enabled }: { brand?: BrandValues; r2Enabled
         <LoadingButton type="submit" pendingLabel={brand ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {brand ? "حفظ العلامة" : "إضافة علامة"}
         </LoadingButton>
-        <FormNote state={state} />
       </div>
     </form>
   );
@@ -263,11 +262,11 @@ export function BrandForm({ brand, r2Enabled }: { brand?: BrandValues; r2Enabled
 
 export function DeleteBrandForm({ id }: { id: string }) {
   const [state, action] = useActionState(deleteBrand, initialFormState);
+  useFormToast(state, "تم حذف العلامة");
   return (
     <form action={action} className="space-y-1">
       <input type="hidden" name="id" value={id} />
       <ConfirmButton message="حذف هذه العلامة؟">حذف</ConfirmButton>
-      <FormNote state={state} />
     </form>
   );
 }
@@ -298,6 +297,7 @@ function poundsInputValue(piasters: number | undefined): string {
 
 export function PromotionForm({ promotion }: { promotion?: PromotionValues }) {
   const [state, action] = useActionState(savePromotion, initialFormState);
+  useFormToast(state, "تم حفظ العرض");
   const [discountType, setDiscountType] = useState<"percentage" | "fixed">(promotion?.discount_type ?? "percentage");
   const [percentValue, setPercentValue] = useState(
     promotion?.discount_type === "percentage" ? String(promotion.discount_value) : ""
@@ -415,7 +415,6 @@ export function PromotionForm({ promotion }: { promotion?: PromotionValues }) {
           <LoadingButton type="submit" className="h-10" pendingLabel={promotion ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
             {promotion ? "حفظ العرض" : "إضافة عرض"}
           </LoadingButton>
-          <FormNote state={state} />
         </div>
       </form>
     </div>
@@ -424,11 +423,11 @@ export function PromotionForm({ promotion }: { promotion?: PromotionValues }) {
 
 export function DeletePromotionForm({ id }: { id: string }) {
   const [state, action] = useActionState(deletePromotion, initialFormState);
+  useFormToast(state, "تم حذف العرض");
   return (
     <form action={action} className="space-y-1">
       <input type="hidden" name="id" value={id} />
       <ConfirmButton message="حذف هذا العرض؟ إذا كان مستخدماً سيتم تعطيله.">حذف</ConfirmButton>
-      <FormNote state={state} />
     </form>
   );
 }
@@ -437,23 +436,6 @@ function savedBannerMessage(type: BannerType) {
   if (type === "hero") return "تم حفظ الشريحة";
   if (type === "announcement") return "تم حفظ الرسالة";
   return "تم حفظ العرض";
-}
-
-function useBannerToast(state: FormState, successMessage: string, closeHash?: string) {
-  const seen = useRef(state);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (seen.current === state) return;
-    seen.current = state;
-    if (state.error) {
-      toast.error(state.error);
-      return;
-    }
-    if (!state.saved) return;
-    toast.success(successMessage);
-    if (closeHash) router.replace(`/admin/homepage#${closeHash}`);
-  }, [closeHash, router, state, successMessage]);
 }
 
 export interface BannerFormValues {
@@ -477,8 +459,9 @@ export function BannerForm({
   bannerType: BannerType;
 }) {
   const [state, action] = useActionState(saveBanner, initialFormState);
+  const router = useRouter();
   const type = banner?.type ?? bannerType;
-  useBannerToast(state, savedBannerMessage(type), type);
+  useFormToast(state, savedBannerMessage(type), () => router.replace(`/admin/homepage#${type}`));
   const imageLabel = type === "hero" ? "صورة الغلاف" : type === "announcement" ? "صورة اختيارية" : "رابط الصورة";
   const imageHint =
     type === "hero"
@@ -522,7 +505,6 @@ export function BannerForm({
         <LoadingButton type="submit" pendingLabel={banner ? "جارٍ الحفظ" : "جارٍ الإضافة"}>
           {banner ? "حفظ البانر" : "إضافة بانر"}
         </LoadingButton>
-        {state.error ? <p className="text-[14px] text-carbon-ink">{state.error}</p> : null}
       </div>
     </form>
   );
@@ -530,7 +512,7 @@ export function BannerForm({
 
 export function MoveBannerForm({ id, direction, disabled }: { id: string; direction: "up" | "down"; disabled?: boolean }) {
   const [state, action] = useActionState(moveBanner, initialFormState);
-  useBannerToast(state, "تم تحديث الترتيب");
+  useFormToast(state, "تم تحديث الترتيب");
   return (
     <form action={action}>
       <input type="hidden" name="id" value={id} />
@@ -544,7 +526,7 @@ export function MoveBannerForm({ id, direction, disabled }: { id: string; direct
 
 export function DeleteBannerForm({ id }: { id: string }) {
   const [state, action] = useActionState(deleteBanner, initialFormState);
-  useBannerToast(state, "تم الحذف");
+  useFormToast(state, "تم الحذف");
   return (
     <form action={action}>
       <input type="hidden" name="id" value={id} />

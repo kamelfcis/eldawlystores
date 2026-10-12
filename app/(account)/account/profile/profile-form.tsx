@@ -12,11 +12,11 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { validatePasswordChange } from "@/lib/account/password-validation";
+import { notify } from "@/lib/feedback/notify";
 
 const SAVE_ERROR = "تعذر حفظ البيانات";
 const EMAIL_CONFIRMATION_NOTICE =
   "تم إرسال رسالة تأكيد إلى البريد الإلكتروني الجديد. لن يتغير البريد حتى يتم التأكيد.";
-const PASSWORD_SUCCESS = "تم تغيير كلمة المرور";
 const GOOGLE_PASSWORD_NOTICE =
   "حسابك مربوط بجوجل. يمكنك تعيين كلمة مرور للدخول بالبريد لاحقاً.";
 
@@ -41,10 +41,8 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState(sessionEmail);
   const [baselineEmail, setBaselineEmail] = useState(sessionEmail);
-  const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -52,8 +50,6 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState("");
-  const [passwordNotice, setPasswordNotice] = useState("");
-
   const requiresCurrentPassword = hasEmailPasswordIdentity(authUser);
 
   useEffect(() => {
@@ -83,9 +79,7 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    setSaved(false);
     setError("");
-    setNotice("");
 
     if (!userId || !isSupabaseConfigured()) {
       setError(SAVE_ERROR);
@@ -126,15 +120,14 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
         }
         if (emailChangeNeedsConfirmation(nextEmail, authData.user)) {
           setEmail(authData.user?.email ?? baselineEmail);
-          setNotice(EMAIL_CONFIRMATION_NOTICE);
+          notify.warning(EMAIL_CONFIRMATION_NOTICE);
         } else {
           setBaselineEmail(nextEmail);
         }
       }
 
       await queryClient.invalidateQueries({ queryKey: ["profile", userId] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      notify.success("تم الحفظ");
     } catch {
       setError(SAVE_ERROR);
     } finally {
@@ -145,7 +138,6 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
     setPasswordError("");
-    setPasswordNotice("");
 
     if (!userId || !isSupabaseConfigured()) {
       setPasswordError(SAVE_ERROR);
@@ -188,7 +180,7 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordNotice(PASSWORD_SUCCESS);
+      notify.success("تم تغيير كلمة المرور");
       const { data: userData } = await supabase.auth.getUser();
       setAuthUser(userData.user ?? null);
     } catch {
@@ -250,10 +242,9 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
                 className="h-10"
               />
             </div>
-            {notice ? <p className="text-sm text-graphite">{notice}</p> : null}
             {error ? <p className="text-sm text-ember-red">{error}</p> : null}
             <Button type="submit" disabled={saving} className="h-10 min-h-10">
-              {saved ? "تم الحفظ ✓" : saving ? "جاري الحفظ..." : "حفظ"}
+              {saving ? "جاري الحفظ..." : "حفظ"}
             </Button>
           </form>
         </CardContent>
@@ -311,7 +302,6 @@ export function ProfileForm({ userId, email: sessionEmail }: { userId: string | 
                 className="h-10"
               />
             </div>
-            {passwordNotice ? <p className="text-sm text-graphite">{passwordNotice}</p> : null}
             {passwordError ? <p className="text-sm text-ember-red">{passwordError}</p> : null}
             <Button type="submit" disabled={passwordSaving} className="h-10 min-h-10">
               {passwordSaving ? "جاري التحديث..." : "تحديث كلمة المرور"}

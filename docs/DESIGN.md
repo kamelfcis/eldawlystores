@@ -69,6 +69,22 @@ CSS-only. No Framer Motion.
 
 `prefers-reduced-motion: reduce` disables hero overlay entrance, card lift/zoom, and slider autoplay (slides jump with no transform). Product rails are user-driven scroll only.
 
+### Toasts
+
+One sonner toaster at the root (`AppToaster` in `app/layout.tsx`). Same stack on admin and storefront — do not mount a second toaster.
+
+**Layout:** `dir="rtl"`, `top-center`, offset under the sticky `h-16` header (`calc(4rem + 8px)`), `closeButton`, `visibleToasts={3}`, container aria-label `إشعارات`.
+
+**Surface:** paper-white panel, mist/ash hairline, `rounded-[8px]`, IBM Plex Sans Arabic 14px, RTL start-aligned text. Allowed overlay shadow only: `0 8px 24px rgb(26 33 30 / 0.06)`. No `richColors`, glass, purple accents, or page gradients.
+
+**Marks:** success teal `#0f6e6b`; warning amber `#c47b12`; error ember `#cc2e39` on `/admin`, retail-red `#a92222` on the storefront (`data-surface` on the toaster).
+
+**Timing:** success/info 3s, warning 4s, error 5s. `prefers-reduced-motion: reduce` disables enter transform.
+
+**API:** call `notify.success | error | warning | info` from `lib/feedback/notify.ts` only. Pass a stable `id` (defaults to the message) so repeated actions dedupe. Admin `FormState` forms use `useFormToast(state, "…")` — errors toast, notices toast as warnings, saved toasts success. Do not duplicate the same feedback with inline `FormNote` on action forms. Field-level validation stays inline.
+
+**When to toast:** completed saves (product, category, order status, settings), cart add/remove, wishlist toggle, compare limit, address CRUD, profile/password, login success. **Do not toast:** filters, sort, pagination, qty ± in cart, theme toggle, drawer open, or navigations that already change the page (checkout confirmation, logout, full reorder redirect to cart).
+
 ## Surfaces
 
 | Level | Token | Value |
@@ -179,6 +195,14 @@ Not built:
 - Reviews — no review table in the catalog
 - Installments — no installment payment provider integrated
 - Countdown deals — no banner end time on homepage offers
+
+## Toasts
+
+One **sonner** toaster mounts in the root layout (`AppToaster`). Admin and storefront share it; `data-surface="admin"` vs `data-surface="store"` (from pathname) switches error icon color only — ember `#cc2e39` on admin, retail red `#a92222` on the storefront.
+
+Position: `top-center`, offset `calc(4rem + 8px)` under the sticky `h-16` header. RTL, start-aligned, IBM Plex Sans Arabic 14px. Paper-white panel, mist hairline, 8px radius, allowed shadow `0 8px 24px rgb(26 33 30 / 0.06)`. No `richColors`, no glass. Success mark: category teal `#0f6e6b`. Warning: category amber `#c47b12`. Durations: success/info 3s, warning 4s, error 5s. `prefers-reduced-motion` disables enter transform.
+
+Feature code calls `notify.success | error | warning | info` from `lib/feedback/notify.ts` (deduped by message id). Admin `FormState` forms use `useFormToast`; inline `FormNote` success/error is removed on those action forms. Field validation stays inline on account forms. Do not toast filters, sort, pagination, qty ±, checkout redirect success, or logout redirect.
 
 ## RTL and responsive
 

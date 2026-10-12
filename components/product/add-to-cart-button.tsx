@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart/cart-provider";
+import { notify } from "@/lib/feedback/notify";
 import type { ProductWithDetails, ProductVariant } from "@/lib/types/database";
 
 interface AddToCartButtonProps {
@@ -38,6 +39,7 @@ export function AddToCartButton({ product, variant }: AddToCartButtonProps) {
           imageUrl: product.images[0]?.url ?? "/placeholder-product.svg",
           stock: variant.stock,
         });
+        notify.success("أُضيف إلى السلة");
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
       }}

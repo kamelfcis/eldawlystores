@@ -6,7 +6,8 @@ import { announcementGradientCss, parseHexColor, type StorefrontBranding } from 
 import { LoadingButton } from "@/components/loading/loading-button";
 import { Input } from "@/components/ui/input";
 import { ImageUrlField } from "./image-url-field";
-import { Field, FormNote, initialFormState } from "./form-bits";
+import { useFormToast } from "@/lib/feedback/use-form-toast";
+import { Field, initialFormState } from "./form-bits";
 
 function HexField({
   name,
@@ -46,6 +47,7 @@ function HexField({
 
 export function BrandingForm({ branding, r2Enabled }: { branding: StorefrontBranding; r2Enabled: boolean }) {
   const [state, action] = useActionState(saveStorefrontBranding, initialFormState);
+  useFormToast(state, "تم الحفظ");
   const [logoUrl, setLogoUrl] = useState(branding.logoUrl);
   const [gradientStart, setGradientStart] = useState(branding.gradientStart);
   const [gradientMid, setGradientMid] = useState(branding.gradientMid ?? "");
@@ -129,7 +131,6 @@ export function BrandingForm({ branding, r2Enabled }: { branding: StorefrontBran
         <LoadingButton type="submit" pendingLabel="جارٍ الحفظ">
           حفظ الهوية
         </LoadingButton>
-        <FormNote state={state} />
       </div>
     </form>
   );

@@ -7,6 +7,7 @@ import { WishlistProvider } from "@/components/wishlist/wishlist-provider";
 import { CompareProvider } from "@/components/compare/compare-provider";
 import { ThemeSync } from "@/components/layout/theme-sync";
 import { ProgressBar } from "@/components/loading/progress-bar";
+import { AppToaster } from "@/components/ui/app-toaster";
 import "./globals.css";
 
 const themeBoot = `(function(){try{if(location.pathname.indexOf("/admin")===0){document.documentElement.classList.remove("dark");return;}var t=localStorage.getItem("doly-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.classList.toggle("dark",t==="dark");}catch(e){}})();`;
@@ -60,7 +61,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QueryProvider>
           <CartProvider>
             <WishlistProvider>
-              <CompareProvider>{children}</CompareProvider>
+              <CompareProvider>
+                {children}
+                <AppToaster />
+              </CompareProvider>
             </WishlistProvider>
           </CartProvider>
         </QueryProvider>
