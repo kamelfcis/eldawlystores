@@ -14,6 +14,7 @@ import { serializeStorefrontBranding, STOREFRONT_BRANDING_KEY } from "@/lib/stor
 import { poundsToPiasters } from "@/lib/money";
 import { readPromotion } from "@/lib/admin/promotion-fields";
 import { normalizeEgyptianMobile } from "@/lib/store-settings";
+import { parseSpecsFromFormData } from "@/lib/catalog/product-specs";
 import type { BannerType, Json, OrderStatus, ProductStatus } from "@/lib/types/database";
 
 export type FormState = { error: string | null; saved: boolean; notice: string | null };
@@ -185,6 +186,7 @@ export async function saveProduct(_prev: FormState, formData: FormData): Promise
   const compareAt = compareRaw === "" ? null : readInt(compareRaw);
   const stock = readInt(readString(formData, "stock"));
   const gallery = readGallery(formData);
+  const document = parseSpecsFromFormData(formData);
 
   if (nameAr.length < 2) return { error: "اسم المنتج مطلوب", saved: false, notice: null };
   if (!isSlug(slug)) return { error: "الرابط يجب أن يكون بالإنجليزية وشرطات فقط", saved: false, notice: null };
@@ -203,6 +205,7 @@ export async function saveProduct(_prev: FormState, formData: FormData): Promise
     category_id: categoryId,
     brand_id: brandId || null,
     status,
+    document: document as unknown as Json,
     updated_at: new Date().toISOString(),
   };
 

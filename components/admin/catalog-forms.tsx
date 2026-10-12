@@ -27,6 +27,8 @@ import { DestinationPicker } from "./destination-picker";
 import { ImageUrlField } from "./image-url-field";
 import { ConfirmButton, Field, initialFormState, selectClass } from "./form-bits";
 import { ProductGalleryField, galleryFromImages } from "./product-gallery";
+import { ProductSpecsField } from "./product-specs-field";
+import type { ProductSpec } from "@/lib/catalog/product-specs";
 
 export interface AdminOption {
   id: string;
@@ -47,6 +49,7 @@ export interface ProductFormValues {
   compare_at_piasters: number | null;
   stock: number;
   images: Array<{ id: string; url: string; sort_order: number }>;
+  specs: ProductSpec[];
 }
 
 export function ProductForm({
@@ -129,6 +132,7 @@ export function ProductForm({
         <Input name="stock" type="number" min={0} step={1} defaultValue={product?.stock ?? 0} required />
       </Field>
       <p className="text-[14px] text-graphite sm:col-span-2">السعر يُحفظ بالقرش. 100 قرش = 1 جنيه.</p>
+      <ProductSpecsField initial={product?.specs ?? []} />
       <ProductGalleryField initial={galleryFromImages(product?.images ?? [])} r2Enabled={r2Enabled} />
       <div className="flex items-center gap-3 sm:col-span-2">
         <LoadingButton type="submit" pendingLabel={product ? "جارٍ الحفظ" : "جارٍ الإضافة"}>

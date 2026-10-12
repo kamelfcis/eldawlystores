@@ -13,7 +13,7 @@ import {
 } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { adminProductExportQuery, getAdminCatalog, parseAdminCatalogFilters } from "@/lib/admin/queries";
+import { adminProductExportQuery, getAdminCatalog, getAdminProductById, parseAdminCatalogFilters } from "@/lib/admin/queries";
 import { formatMoney } from "@/lib/money";
 import { isR2Configured } from "@/lib/storage";
 import type { ProductStatus } from "@/lib/types/database";
@@ -53,7 +53,9 @@ export default async function AdminProductsPage({
   const categoryOptions = categories.map((category) => ({ id: category.id, label: category.name_ar }));
   const brandOptions = brands.map((brand) => ({ id: brand.id, label: brand.name }));
   const exportHref = `/api/admin/export?${adminProductExportQuery(filters)}`;
-  const editing = params.edit && params.edit !== "new" ? products.find((product) => product.id === params.edit) : undefined;
+  const editId = params.edit && params.edit !== "new" ? params.edit : "";
+  const editingFromList = editId ? products.find((product) => product.id === editId) : undefined;
+  const editing = editingFromList ?? (editId ? (await getAdminProductById(editId)) ?? undefined : undefined);
   const showForm = params.edit === "new" || Boolean(params.edit);
 
   function href(patch: Record<string, string | null>) {
@@ -163,15 +165,16 @@ export default async function AdminProductsPage({
       ) : null}
 
       {showForm ? (
-        <section className="space-y-3 rounded-[8px] border border-mist bg-paper-white p-4">
+        <section className="space-y-3 rounded-[8px] border border-mist border-t-2 border-t-category-blue bg-paper-white p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-[14px] font-bold tracking-[0.038em]">{params.edit === "new" ? "منتج جديد" : "تعديل المنتج"}</h2>
             <Link href={href({ edit: null })} className="text-[14px] text-graphite">إغلاق</Link>
           </div>
           {params.edit !== "new" && !editing ? (
-            <AdminEmpty>المنتج غير موجود في النتائج الحالية.</AdminEmpty>
+            <AdminEmpty>المنتج غير موجود.</AdminEmpty>
           ) : (
             <ProductForm
+              key={editing?.id ?? "new"}
               categories={categoryOptions}
               brands={brandOptions}
               product={editing}

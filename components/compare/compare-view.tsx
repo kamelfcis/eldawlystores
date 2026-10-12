@@ -10,6 +10,7 @@ import { AddToCartButton } from "@/components/product/add-to-cart-button";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { loadCompareProducts } from "@/lib/compare/actions";
+import { specValueForLabel, unionSpecLabels } from "@/lib/catalog/product-specs";
 import type { ProductWithDetails } from "@/lib/types/database";
 
 const ROWS = [
@@ -148,7 +149,7 @@ export function CompareView({ initialIdsFromUrl }: { initialIdsFromUrl: string[]
   }
 
   return (
-    <div className="space-y-6 pb-24" aria-busy={loading}>
+    <div className="min-w-0 space-y-6 pb-24" aria-busy={loading}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-retail-ink">مقارنة المنتجات</h1>
         <p className="text-[14px] text-retail-muted">{columns.length} منتجات</p>
@@ -176,7 +177,27 @@ export function CompareView({ initialIdsFromUrl }: { initialIdsFromUrl: string[]
           </TableRow>
         </TableHeader>
         <TableBody>
-          {ROWS.map((row) => (
+          {ROWS.filter((row) => row.key !== "cart").map((row) => (
+            <TableRow key={row.key}>
+              <TableCell className="sticky start-0 z-10 bg-paper-white font-bold text-retail-ink">{row.label}</TableCell>
+              {columns.map((product) => (
+                <TableCell key={`${row.key}-${product.id}`}>{cellValue(row.key, product)}</TableCell>
+              ))}
+            </TableRow>
+          ))}
+          {unionSpecLabels(columns).map((label) => {
+            const values = columns.map((product) => specValueForLabel(product.specs, label) ?? "—");
+            const differs = new Set(values).size > 1;
+            return (
+              <TableRow key={`spec-${label}`} className={differs ? "bg-fog" : undefined}>
+                <TableCell className={`sticky start-0 z-10 font-bold text-retail-ink ${differs ? "bg-fog" : "bg-paper-white"}`}>{label}</TableCell>
+                {columns.map((product, index) => (
+                  <TableCell key={`spec-${label}-${product.id}`}>{values[index]}</TableCell>
+                ))}
+              </TableRow>
+            );
+          })}
+          {ROWS.filter((row) => row.key === "cart").map((row) => (
             <TableRow key={row.key}>
               <TableCell className="sticky start-0 z-10 bg-paper-white font-bold text-retail-ink">{row.label}</TableCell>
               {columns.map((product) => (

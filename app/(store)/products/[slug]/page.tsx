@@ -5,6 +5,7 @@ import { ProductPrice, stockLabel } from "@/components/product/product-price";
 import { ProductGrid } from "@/components/product/product-grid";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { AddToCartButton } from "@/components/product/add-to-cart-button";
+import { ProductSpecs } from "@/components/product/product-specs";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { WishlistButton } from "@/components/wishlist/wishlist-button";
 import { CompareButton } from "@/components/compare/compare-button";
@@ -114,6 +115,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
               <p className="text-[14px] leading-relaxed text-graphite">{product.description_ar}</p>
             </div>
           ) : null}
+
+          <ProductSpecs specs={product.specs} />
         </div>
       </div>
 

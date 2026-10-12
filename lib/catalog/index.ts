@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { isSupabaseConfigured, getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 import { isCatalogSuccess, runCatalogFetch } from "@/lib/catalog/fetch";
 import { mockCategories, mockProducts, mockBrands, mockBanners } from "@/lib/mock-data";
-import type { Database, ProductWithDetails, Category, Brand, Product, ProductVariant } from "@/lib/types/database";
+import { parseProductDocument } from "@/lib/catalog/product-specs";
+import type { Database, Json, ProductWithDetails, Category, Brand, Product, ProductVariant } from "@/lib/types/database";
 
 export { classifyCatalogError, isRetryable, userFacingMessage } from "@/lib/catalog/errors";
 export type { CatalogErrorKind } from "@/lib/catalog/errors";
@@ -44,7 +45,7 @@ const VARIANT_COLUMNS =
   "id, product_id, sku, price_piasters, compare_at_piasters, stock, is_default, created_at";
 
 const PRODUCT_SELECT = `
-  id, name_ar, slug, description_ar, category_id, brand_id, status, rating, created_at, updated_at,
+  id, name_ar, slug, description_ar, category_id, brand_id, status, rating, document, created_at, updated_at,
   brand:brands(id, name, slug, logo_url, created_at),
   category:categories(id, name_ar, slug, description_ar, image_url, sort_order, created_at),
   variants:product_variants(${VARIANT_COLUMNS}),
@@ -78,6 +79,7 @@ function mapProduct(row: ProductRow): ProductWithDetails | null {
 
   const defaultVariant = variants.find((variant) => variant.is_default) ?? variants[0];
   const images = [...(row.images ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const document = parseProductDocument(row.document);
 
   return {
     id: row.id,
@@ -88,8 +90,10 @@ function mapProduct(row: ProductRow): ProductWithDetails | null {
     brand_id: row.brand_id,
     status: row.status,
     rating: row.rating == null ? null : Number(row.rating),
+    document: document as unknown as Json,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    specs: document.specs,
     brand: asOne(row.brand),
     category,
     variants,
@@ -299,7 +303,7 @@ async function fetchFilteredProducts(filters: ProductFilters): Promise<Paginated
       filters.sort === "price_desc";
 
     const select = `
-      id, name_ar, slug, description_ar, category_id, brand_id, status, rating, created_at, updated_at,
+      id, name_ar, slug, description_ar, category_id, brand_id, status, rating, document, created_at, updated_at,
       brand:brands${filters.brandSlug ? "!inner" : ""}(id, name, slug, logo_url, created_at),
       category:categories${filters.categorySlug ? "!inner" : ""}(id, name_ar, slug, description_ar, image_url, sort_order, created_at),
       variants:product_variants${filterVariants ? "!inner" : ""}(${VARIANT_COLUMNS}),

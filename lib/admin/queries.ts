@@ -8,7 +8,8 @@ import {
 } from "@/lib/admin/notification-emails";
 import { parseStorefrontBranding, STOREFRONT_BRANDING_KEY } from "@/lib/store-branding";
 import { readWhatsappValue } from "@/lib/store-settings";
-import type { Database, ProductStatus } from "@/lib/types/database";
+import { parseProductDocument, type ProductSpec } from "@/lib/catalog/product-specs";
+import type { Database, Json, ProductStatus } from "@/lib/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function asArray<T>(value: T | T[] | null | undefined): T[] {
@@ -38,6 +39,7 @@ export interface AdminProductRow {
   imageId: string;
   image_url: string;
   images: AdminProductImage[];
+  specs: ProductSpec[];
 }
 
 export type AdminStockFilter = "in" | "low" | "out";
@@ -52,7 +54,53 @@ export interface AdminCatalogFilters {
 }
 
 const productSelect =
-  "id, name_ar, slug, description_ar, category_id, brand_id, status, created_at, variants:product_variants(id, sku, price_piasters, compare_at_piasters, stock, is_default), images:product_images(id, url, sort_order)";
+  "id, name_ar, slug, description_ar, category_id, brand_id, status, document, created_at, variants:product_variants(id, sku, price_piasters, compare_at_piasters, stock, is_default), images:product_images(id, url, sort_order)";
+
+type AdminProductQueryRow = {
+  id: string;
+  name_ar: string;
+  slug: string;
+  description_ar: string | null;
+  category_id: string;
+  brand_id: string | null;
+  status: ProductStatus;
+  document?: Json | null;
+  variants: Array<{
+    id: string;
+    sku: string;
+    price_piasters: number;
+    compare_at_piasters: number | null;
+    stock: number;
+    is_default: boolean;
+  }> | null;
+  images: Array<{ id: string; url: string; sort_order: number }> | null;
+};
+
+function mapAdminProduct(product: AdminProductQueryRow): AdminProductRow {
+  const variants = asArray(product.variants);
+  const variant = variants.find((item) => item.is_default) ?? variants[0];
+  const images = [...asArray(product.images)]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((image) => ({ id: image.id, url: image.url, sort_order: image.sort_order }));
+  return {
+    id: product.id,
+    name_ar: product.name_ar,
+    slug: product.slug,
+    description_ar: product.description_ar,
+    category_id: product.category_id,
+    brand_id: product.brand_id,
+    status: product.status,
+    variantId: variant?.id ?? "",
+    sku: variant?.sku ?? "",
+    price_piasters: variant?.price_piasters ?? 0,
+    compare_at_piasters: variant?.compare_at_piasters ?? null,
+    stock: variant?.stock ?? 0,
+    imageId: images[0]?.id ?? "",
+    image_url: images[0]?.url ?? "",
+    images,
+    specs: parseProductDocument(product.document).specs,
+  };
+}
 
 function escapeIlike(value: string): string {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
@@ -184,47 +232,7 @@ export async function getAdminCatalog(filters: AdminCatalogFilters = {}) {
     error: productsResultError ? { message: productsResultError } : null,
   };
 
-  const products = ((productsResult.data ?? []) as unknown as Array<{
-    id: string;
-    name_ar: string;
-    slug: string;
-    description_ar: string | null;
-    category_id: string;
-    brand_id: string | null;
-    status: ProductStatus;
-    variants: Array<{
-      id: string;
-      sku: string;
-      price_piasters: number;
-      compare_at_piasters: number | null;
-      stock: number;
-      is_default: boolean;
-    }> | null;
-    images: Array<{ id: string; url: string; sort_order: number }> | null;
-  }>).map((product) => {
-    const variants = asArray(product.variants);
-    const variant = variants.find((item) => item.is_default) ?? variants[0];
-    const images = [...asArray(product.images)]
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((image) => ({ id: image.id, url: image.url, sort_order: image.sort_order }));
-    return {
-      id: product.id,
-      name_ar: product.name_ar,
-      slug: product.slug,
-      description_ar: product.description_ar,
-      category_id: product.category_id,
-      brand_id: product.brand_id,
-      status: product.status,
-      variantId: variant?.id ?? "",
-      sku: variant?.sku ?? "",
-      price_piasters: variant?.price_piasters ?? 0,
-      compare_at_piasters: variant?.compare_at_piasters ?? null,
-      stock: variant?.stock ?? 0,
-      imageId: images[0]?.id ?? "",
-      image_url: images[0]?.url ?? "",
-      images,
-    } satisfies AdminProductRow;
-  });
+  const products = ((productsResult.data ?? []) as unknown as AdminProductQueryRow[]).map(mapAdminProduct);
 
   return {
     products,
@@ -232,6 +240,15 @@ export async function getAdminCatalog(filters: AdminCatalogFilters = {}) {
     brands: brandsResult.data ?? [],
     error: arabicDbError(productsResult.error) ?? arabicDbError(categoriesResult.error) ?? arabicDbError(brandsResult.error),
   };
+}
+
+export async function getAdminProductById(id: string): Promise<AdminProductRow | null> {
+  if (!isUuid(id)) return null;
+  await assertAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("products").select(productSelect).eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  return mapAdminProduct(data as unknown as AdminProductQueryRow);
 }
 
 export async function getLowStock(limit = 20) {

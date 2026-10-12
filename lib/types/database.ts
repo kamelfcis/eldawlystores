@@ -67,6 +67,7 @@ export interface Database {
           brand_id: string | null;
           status: ProductStatus;
           rating: number | null;
+          document: Json;
           created_at: string;
           updated_at: string;
         };
@@ -323,4 +324,5 @@ export interface ProductWithDetails extends Product {
   variants: ProductVariant[];
   images: Database["public"]["Tables"]["product_images"]["Row"][];
   defaultVariant: ProductVariant;
+  specs: Array<{ label: string; value: string }>;
 }
