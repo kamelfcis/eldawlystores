@@ -10,13 +10,19 @@ import {
   StatusPill,
 } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
-import { getAdminBanners } from "@/lib/admin/queries";
+import { getAdminBanners, getAdminCategoryOptions } from "@/lib/admin/queries";
 import { isR2Configured } from "@/lib/storage";
 import type { BannerType } from "@/lib/types/database";
 
 export const metadata = { title: "إدارة الصفحة الرئيسية" };
 
 const bannerColumns = "lg:grid-cols-[auto_1.6fr_auto_auto]";
+
+const editorEdgeClass: Record<BannerType, string> = {
+  hero: "border-t-category-blue",
+  offer: "border-t-category-teal",
+  announcement: "border-t-category-amber",
+};
 
 const SECTIONS: Array<{ type: BannerType; title: string; addLabel: string; helper: string }> = [
   {
@@ -49,13 +55,16 @@ export default async function AdminHomepagePage({
   searchParams: Promise<{ edit?: string; type?: string }>;
 }) {
   const params = await searchParams;
-  const { banners, error } = await getAdminBanners();
+  const [{ banners, error }, { categories, error: categoriesError }] = await Promise.all([
+    getAdminBanners(),
+    getAdminCategoryOptions(),
+  ]);
   const r2Enabled = isR2Configured();
   const editing = params.edit && params.edit !== "new" ? banners.find((banner) => banner.id === params.edit) : undefined;
 
   return (
     <AdminPage title="الصفحة الرئيسية">
-      <AdminError message={error} />
+      <AdminError message={[error, categoriesError].filter(Boolean).join(" ") || null} />
       {params.edit && params.edit !== "new" && !editing ? <AdminEmpty>البانر غير موجود.</AdminEmpty> : null}
       {SECTIONS.map((section) => {
         const rows = banners
@@ -75,11 +84,15 @@ export default async function AdminHomepagePage({
             </div>
             <p className="text-[14px] text-graphite">{section.helper}</p>
             {formOpen ? (
-              <div className="rounded-[8px] border border-mist bg-paper-white p-4">
+              <div
+                className={`rounded-[8px] border border-mist border-t-2 bg-paper-white p-4 ${editorEdgeClass[section.type]}`}
+              >
                 <BannerForm
+                  key={editing?.type === section.type ? editing.id : `new-${section.type}`}
                   banner={editing?.type === section.type ? editing : undefined}
                   r2Enabled={r2Enabled}
                   bannerType={section.type}
+                  categories={categories}
                 />
               </div>
             ) : null}

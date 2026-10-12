@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { UploadProgress } from "@/components/loading/upload-progress";
 import { useDeferredBusy } from "@/components/loading/use-deferred-busy";
 import { uploadAdminFile } from "@/lib/loading/upload";
@@ -18,6 +18,7 @@ export function ImageUrlField({
   hint,
   previewClassName,
   previewFit = "cover",
+  resetKey,
   onUrlChange,
 }: {
   name: string;
@@ -28,9 +29,15 @@ export function ImageUrlField({
   hint?: string;
   previewClassName?: string;
   previewFit?: "cover" | "contain";
+  resetKey?: string;
   onUrlChange?: (url: string) => void;
 }) {
   const [url, setUrl] = useState(defaultValue);
+
+  useEffect(() => {
+    setUrl(defaultValue);
+    setMessage("");
+  }, [defaultValue, resetKey]);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [loaded, setLoaded] = useState(0);

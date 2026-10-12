@@ -312,6 +312,62 @@ export async function getAdminBanners() {
   return { banners: data ?? [], error: arabicDbError(error) };
 }
 
+export interface AdminCategoryOption {
+  id: string;
+  name_ar: string;
+  slug: string;
+}
+
+export async function getAdminCategoryOptions() {
+  await assertAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name_ar, slug")
+    .order("sort_order");
+  return { categories: (data ?? []) as AdminCategoryOption[], error: arabicDbError(error) };
+}
+
+export interface AdminProductSearchRow {
+  id: string;
+  name_ar: string;
+  slug: string;
+  image_url: string | null;
+}
+
+export async function searchAdminProducts(query: string, limit = 8) {
+  await assertAdmin();
+  const q = query.trim();
+  if (q.length < 2) return { products: [] as AdminProductSearchRow[], error: null };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name_ar, slug, images:product_images(url, sort_order)")
+    .ilike("name_ar", `%${escapeIlike(q)}%`)
+    .order("name_ar")
+    .limit(limit);
+
+  if (error) return { products: [] as AdminProductSearchRow[], error: arabicDbError(error) };
+
+  const products = ((data ?? []) as unknown as Array<{
+    id: string;
+    name_ar: string;
+    slug: string;
+    images: Array<{ url: string; sort_order: number }> | null;
+  }>).map((row) => {
+    const images = [...asArray(row.images)].sort((a, b) => a.sort_order - b.sort_order);
+    return {
+      id: row.id,
+      name_ar: row.name_ar,
+      slug: row.slug,
+      image_url: images[0]?.url ?? null,
+    } satisfies AdminProductSearchRow;
+  });
+
+  return { products, error: null };
+}
+
 export interface AdminShippingRate {
   id: string;
   governorate: string;

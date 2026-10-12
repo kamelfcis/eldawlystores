@@ -22,6 +22,8 @@ import {
 } from "@/lib/admin/actions";
 import { formatMoney, piastersToPounds } from "@/lib/money";
 import type { BannerType, ProductStatus } from "@/lib/types/database";
+import type { AdminCategoryOption } from "@/lib/admin/queries";
+import { DestinationPicker } from "./destination-picker";
 import { ImageUrlField } from "./image-url-field";
 import { ConfirmButton, Field, initialFormState, selectClass } from "./form-bits";
 import { ProductGalleryField, galleryFromImages } from "./product-gallery";
@@ -453,14 +455,24 @@ export function BannerForm({
   banner,
   r2Enabled,
   bannerType,
+  categories,
 }: {
   banner?: BannerFormValues;
   r2Enabled: boolean;
   bannerType: BannerType;
+  categories: AdminCategoryOption[];
 }) {
   const [state, action] = useActionState(saveBanner, initialFormState);
   const router = useRouter();
   const type = banner?.type ?? bannerType;
+  const [titleAr, setTitleAr] = useState(banner?.title_ar ?? "");
+  const [subtitleAr, setSubtitleAr] = useState(banner?.subtitle_ar ?? "");
+  const [linkUrl, setLinkUrl] = useState(banner?.link_url ?? "");
+  const [sortOrder, setSortOrder] = useState(String(banner?.sort_order ?? 0));
+  const [isActive, setIsActive] = useState(banner?.is_active ?? true);
+  const [imageUrl, setImageUrl] = useState(banner?.image_url ?? "");
+  const formKey = banner?.id ?? `new-${type}`;
+
   useFormToast(state, savedBannerMessage(type), () => router.replace(`/admin/homepage#${type}`));
   const imageLabel = type === "hero" ? "صورة الغلاف" : type === "announcement" ? "صورة اختيارية" : "رابط الصورة";
   const imageHint =
@@ -469,35 +481,56 @@ export function BannerForm({
       : type === "offer"
         ? "المقاس: 800×1000 للبطاقة اليسرى والبطاقة اليمنى"
         : "اختياري. ارتفاع الصورة 36px داخل شريط 48px، object-contain. ارفع حوالي 144×144 أو شعار قصير حوالي 240×96";
+  const previewClassName =
+    type === "hero"
+      ? "aspect-video w-full max-w-md overflow-hidden rounded-[8px] border border-mist bg-fog"
+      : type === "announcement"
+        ? "h-9 w-[72px] overflow-hidden rounded-[4px] border border-mist bg-paper-white p-0.5"
+        : "aspect-[4/5] w-full max-w-[160px] overflow-hidden rounded-[8px] border border-mist bg-fog";
+  const previewFit = type === "announcement" ? "contain" : "cover";
+
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2">
       {banner ? <input type="hidden" name="id" value={banner.id} /> : null}
       <input type="hidden" name="type" value={type} />
+      <input type="hidden" name="image_url" value={imageUrl} readOnly />
       <Field label="العنوان">
-        <Input name="title_ar" defaultValue={banner?.title_ar} required />
+        <Input name="title_ar" value={titleAr} onChange={(event) => setTitleAr(event.target.value)} required />
       </Field>
       <Field label="العنوان الفرعي">
-        <Input name="subtitle_ar" defaultValue={banner?.subtitle_ar ?? ""} />
+        <Input name="subtitle_ar" value={subtitleAr} onChange={(event) => setSubtitleAr(event.target.value)} />
       </Field>
-      <Field label="رابط الوجهة">
-        <Input name="link_url" defaultValue={banner?.link_url ?? ""} placeholder="/products" />
-      </Field>
+      <div className="sm:col-span-2">
+        <DestinationPicker categories={categories} value={linkUrl} onChange={setLinkUrl} />
+      </div>
       <Field label="الترتيب">
-        <Input name="sort_order" type="number" min={0} step={1} defaultValue={banner?.sort_order ?? 0} />
+        <Input
+          name="sort_order"
+          type="number"
+          min={0}
+          step={1}
+          value={sortOrder}
+          onChange={(event) => setSortOrder(event.target.value)}
+        />
       </Field>
       <label className="flex items-center gap-2 text-[14px]">
-        <input type="checkbox" name="is_active" defaultChecked={banner?.is_active ?? true} />
+        <input type="checkbox" name="is_active" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
         نشط
       </label>
       <div className="sm:col-span-2">
         <Field label={imageLabel}>
           <ImageUrlField
-            name="image_url"
+            key={formKey}
+            resetKey={formKey}
+            name="image_url_display"
             defaultValue={banner?.image_url ?? ""}
             r2Enabled={r2Enabled}
             placeholder="https://"
             folder="banners"
             hint={imageHint}
+            previewClassName={previewClassName}
+            previewFit={previewFit}
+            onUrlChange={setImageUrl}
           />
         </Field>
       </div>
