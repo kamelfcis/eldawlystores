@@ -33,6 +33,20 @@ describe("admin orders list markup", () => {
     expect(adminUi).toContain("min-h-10");
     expect(ordersList).toContain("الكل");
   });
+
+  it("scan queue: start-edge accents, terminal form hidden, contact links, count meta", () => {
+    expect(ordersList).toContain("border-s-[2px]");
+    expect(ordersList).toContain("customerTelHref");
+    expect(ordersList).toContain("customerWhatsAppHref");
+    expect(ordersList).toContain("MessageCircle");
+    expect(ordersList).toContain('toLocaleString("ar-EG")');
+    expect(ordersList).toContain("طلب");
+    expect(ordersList).toContain("terminalStatuses");
+    expect(ordersList).toContain("!terminal");
+    expect(ordersList).toContain("flex flex-wrap items-center gap-2");
+    expect(adminUi).toContain("className?: string");
+    expect(adminUi).toContain("style?: React.CSSProperties");
+  });
 });
 
 describe("admin order detail markup", () => {

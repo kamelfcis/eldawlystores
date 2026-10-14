@@ -74,10 +74,21 @@ export function AdminList({
   );
 }
 
-export function AdminListRow({ gridClass, children }: { gridClass: string; children: React.ReactNode }) {
+export function AdminListRow({
+  gridClass,
+  children,
+  className,
+  style,
+}: {
+  gridClass: string;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <li
-      className={`grid gap-3 rounded-[8px] border border-mist bg-paper-white px-4 py-3 text-[14px] lg:rounded-none lg:border-0 lg:border-b lg:last:border-0 ${gridClass} lg:items-center`}
+      className={`grid gap-3 rounded-[8px] border border-mist bg-paper-white px-4 py-3 text-[14px] lg:rounded-none lg:border-0 lg:border-b lg:last:border-0 ${gridClass} lg:items-center${className ? ` ${className}` : ""}`}
+      style={style}
     >
       {children}
     </li>

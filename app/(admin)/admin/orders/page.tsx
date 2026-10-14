@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import {
   AdminEmpty,
   AdminError,
@@ -13,6 +14,7 @@ import {
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
+import { customerTelHref, customerWhatsAppHref } from "@/lib/orders/customer-contact";
 import { ORDER_STATUSES, allowedOrderStatuses, listAdminOrders } from "@/lib/orders";
 import type { OrderStatus } from "@/lib/types/database";
 
@@ -36,10 +38,16 @@ const statusColors: Record<OrderStatus, string> = {
   rejected: "#cc2e39",
 };
 
+const terminalStatuses = new Set<OrderStatus>(["delivered", "cancelled", "rejected"]);
+
 const orderColumns = "lg:grid-cols-[1.1fr_1fr_1fr_1fr_1.2fr_1.4fr]";
 
 function isStatus(value: string | undefined): value is OrderStatus {
   return ORDER_STATUSES.includes(value as OrderStatus);
+}
+
+function orderRowEdgeColor(status: OrderStatus): string {
+  return terminalStatuses.has(status) ? "#e0e0e0" : statusColors[status];
 }
 
 export default async function AdminOrdersPage({
@@ -54,6 +62,12 @@ export default async function AdminOrdersPage({
   return (
     <AdminPage
       title="الطلبات"
+      meta={
+        <p className="text-[14px] text-graphite">
+          {orders.length.toLocaleString("ar-EG")} طلب
+          {status ? ` · ${statusLabels[status]}` : ""}
+        </p>
+      }
       action={
         <Button asChild variant="outline">
           <a href="/api/admin/export?resource=orders">تصدير Excel</a>
@@ -75,39 +89,71 @@ export default async function AdminOrdersPage({
         <AdminEmpty>{status ? "لا توجد طلبات بهذه الحالة." : "لا توجد طلبات بعد."}</AdminEmpty>
       ) : (
         <AdminList columns={["رقم الطلب", "العميل", "الهاتف", "الإجمالي", "التاريخ", "الحالة"]} gridClass={orderColumns}>
-          {orders.map((order) => (
-            <AdminListRow key={order.id} gridClass={orderColumns}>
-              <AdminListCell label="رقم الطلب">
-                <Link href={`/admin/orders/${order.id}`} className="font-mono font-bold text-carbon-ink underline-offset-2 hover:underline">
-                  {order.orderNumber}
-                </Link>
-              </AdminListCell>
-              <AdminListCell label="العميل">
-                <span className="text-[14px] text-carbon-ink">{order.customerName}</span>
-              </AdminListCell>
-              <AdminListCell label="الهاتف">
-                <span className="text-graphite" dir="ltr">
-                  {order.customerPhone}
-                </span>
-              </AdminListCell>
-              <AdminListCell label="الإجمالي">
-                <span className="text-[14px] text-carbon-ink">{formatMoney(order.totalPiasters)}</span>
-              </AdminListCell>
-              <AdminListCell label="التاريخ">
-                <span className="text-graphite">{formatAdminTime(order.createdAt)}</span>
-              </AdminListCell>
-              <AdminListCell label="الحالة">
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <StatusPill color={statusColors[order.status]}>{statusLabels[order.status]}</StatusPill>
-                  <OrderStatusForm
-                    orderId={order.id}
-                    status={order.status}
-                    allowedStatuses={allowedOrderStatuses(order.status)}
-                  />
-                </div>
-              </AdminListCell>
-            </AdminListRow>
-          ))}
+          {orders.map((order) => {
+            const telHref = customerTelHref(order.customerPhone);
+            const whatsappHref = customerWhatsAppHref(order.customerPhone);
+            const terminal = terminalStatuses.has(order.status);
+
+            return (
+              <AdminListRow
+                key={order.id}
+                gridClass={orderColumns}
+                className="border-s-[2px]"
+                style={{ borderColor: orderRowEdgeColor(order.status) }}
+              >
+                <AdminListCell label="رقم الطلب">
+                  <Link href={`/admin/orders/${order.id}`} className="font-mono font-bold text-carbon-ink underline-offset-2 hover:underline">
+                    {order.orderNumber}
+                  </Link>
+                </AdminListCell>
+                <AdminListCell label="العميل">
+                  <span className="text-[14px] text-carbon-ink">{order.customerName}</span>
+                </AdminListCell>
+                <AdminListCell label="الهاتف">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {telHref ? (
+                      <a href={telHref} dir="ltr" className="inline-flex min-h-10 items-center text-graphite underline-offset-2 hover:underline">
+                        {order.customerPhone}
+                      </a>
+                    ) : (
+                      <span className="text-graphite" dir="ltr">
+                        {order.customerPhone}
+                      </span>
+                    )}
+                    {whatsappHref ? (
+                      <a
+                        href={whatsappHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="واتساب"
+                        className="inline-flex min-h-10 items-center text-carbon-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-carbon-ink"
+                      >
+                        <MessageCircle size={14} aria-hidden="true" />
+                      </a>
+                    ) : null}
+                  </div>
+                </AdminListCell>
+                <AdminListCell label="الإجمالي">
+                  <span className="text-[14px] text-carbon-ink">{formatMoney(order.totalPiasters)}</span>
+                </AdminListCell>
+                <AdminListCell label="التاريخ">
+                  <span className="text-graphite">{formatAdminTime(order.createdAt)}</span>
+                </AdminListCell>
+                <AdminListCell label="الحالة">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusPill color={statusColors[order.status]}>{statusLabels[order.status]}</StatusPill>
+                    {!terminal ? (
+                      <OrderStatusForm
+                        orderId={order.id}
+                        status={order.status}
+                        allowedStatuses={allowedOrderStatuses(order.status)}
+                      />
+                    ) : null}
+                  </div>
+                </AdminListCell>
+              </AdminListRow>
+            );
+          })}
         </AdminList>
       )}
     </AdminPage>
