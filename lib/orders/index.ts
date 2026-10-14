@@ -14,8 +14,11 @@ import {
   type AdminDayPoint,
   type TrendOrderRow,
 } from "@/lib/orders/trends";
+import { validTransitions } from "@/lib/orders/transitions";
+import { loadOrderItemImageUrls, PLACEHOLDER_PRODUCT_IMAGE } from "@/lib/orders/variant-images";
 
 export type { AdminDayPoint } from "@/lib/orders/trends";
+export { allowedOrderStatuses, validTransitions } from "@/lib/orders/transitions";
 
 export interface OrderRecord {
   id: string;
@@ -47,15 +50,6 @@ export async function updateOrderStatus(
 ): Promise<{ success: boolean; error?: string }> {
   const order = orderStore.get(orderId);
   if (!order) return { success: false, error: "الطلب غير موجود" };
-
-  const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-    pending: ["confirmed", "cancelled", "rejected"],
-    confirmed: ["shipped", "cancelled"],
-    shipped: ["delivered", "cancelled"],
-    delivered: [],
-    cancelled: [],
-    rejected: [],
-  };
 
   if (!validTransitions[order.status].includes(newStatus)) {
     return { success: false, error: "انتقال الحالة غير مسموح" };
@@ -160,15 +154,6 @@ export const ORDER_STATUSES = [
 
 const REVENUE_EXCLUDED_STATUSES: OrderStatus[] = ["cancelled", "rejected"];
 
-const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-  pending: ["confirmed", "cancelled", "rejected"],
-  confirmed: ["shipped", "cancelled"],
-  shipped: ["delivered", "cancelled"],
-  delivered: [],
-  cancelled: [],
-  rejected: [],
-};
-
 export interface AdminOrderListItem {
   id: string;
   orderNumber: string;
@@ -185,6 +170,8 @@ export interface AdminOrderItem {
   sku: string;
   quantity: number;
   unitPricePiasters: number;
+  variantId: string;
+  imageUrl: string;
 }
 
 export interface AdminOrderHistoryEntry {
@@ -451,7 +438,7 @@ export async function getAdminOrder(orderId: string): Promise<{ order: AdminOrde
       .maybeSingle(),
     supabase
       .from("order_items")
-      .select("id, product_name, variant_sku, quantity, unit_price_piasters")
+      .select("id, product_name, variant_sku, quantity, unit_price_piasters, variant_id")
       .eq("order_id", orderId),
     supabase
       .from("order_status_history")
@@ -471,6 +458,12 @@ export async function getAdminOrder(orderId: string): Promise<{ order: AdminOrde
     return [{ id: entry.id, status: entry.status, note: entry.note, createdAt: entry.created_at }];
   });
 
+  const rawItems = itemsResult.data ?? [];
+  const imageByVariant = await loadOrderItemImageUrls(
+    supabase,
+    rawItems.map((item) => item.variant_id)
+  );
+
   return {
     order: {
       id: order.id,
@@ -485,12 +478,14 @@ export async function getAdminOrder(orderId: string): Promise<{ order: AdminOrde
       totalPiasters: order.total_piasters,
       createdAt: order.created_at,
       addressLines: addressLines(order.shipping_address),
-      items: (itemsResult.data ?? []).map((item) => ({
+      items: rawItems.map((item) => ({
         id: item.id,
         productName: item.product_name,
         sku: item.variant_sku,
         quantity: item.quantity,
         unitPricePiasters: item.unit_price_piasters,
+        variantId: item.variant_id,
+        imageUrl: imageByVariant.get(item.variant_id) ?? PLACEHOLDER_PRODUCT_IMAGE,
       })),
       history,
     },

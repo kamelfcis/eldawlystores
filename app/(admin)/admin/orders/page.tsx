@@ -13,7 +13,7 @@ import {
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
-import { ORDER_STATUSES, listAdminOrders } from "@/lib/orders";
+import { ORDER_STATUSES, allowedOrderStatuses, listAdminOrders } from "@/lib/orders";
 import type { OrderStatus } from "@/lib/types/database";
 
 export const metadata = { title: "إدارة الطلبات" };
@@ -99,7 +99,11 @@ export default async function AdminOrdersPage({
               <AdminListCell label="الحالة">
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                   <StatusPill color={statusColors[order.status]}>{statusLabels[order.status]}</StatusPill>
-                  <OrderStatusForm orderId={order.id} status={order.status} />
+                  <OrderStatusForm
+                    orderId={order.id}
+                    status={order.status}
+                    allowedStatuses={allowedOrderStatuses(order.status)}
+                  />
                 </div>
               </AdminListCell>
             </AdminListRow>

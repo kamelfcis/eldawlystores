@@ -1,9 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { customerTelHref, customerWhatsAppHref } from "@/lib/orders/customer-contact";
+import { allowedOrderStatuses, validTransitions } from "@/lib/orders/transitions";
 
 const ordersList = readFileSync("app/(admin)/admin/orders/page.tsx", "utf8");
 const orderDetail = readFileSync("app/(admin)/admin/orders/[id]/page.tsx", "utf8");
 const statusForm = readFileSync("components/admin/order-status-form.tsx", "utf8");
+const ordersLib = readFileSync("lib/orders/index.ts", "utf8");
+const customerContact = readFileSync("lib/orders/customer-contact.ts", "utf8");
 const adminUi = readFileSync("components/admin/admin-ui.tsx", "utf8");
 const settingsPage = readFileSync("app/(admin)/admin/settings/page.tsx", "utf8");
 const settingsForms = readFileSync("components/admin/settings-forms.tsx", "utf8");
@@ -38,11 +42,28 @@ describe("admin order detail markup", () => {
     expect(orderDetail).toContain("المنتج");
     expect(orderDetail).toContain("SKU");
     expect(orderDetail).toContain("الكمية");
+    expect(orderDetail).toContain("سعر الوحدة");
     expect(orderDetail).toContain("الإجمالي");
     expect(orderDetail).toContain("formatMoney(lineTotal)");
     expect(orderDetail).toContain('dir="ltr"');
     expect(orderDetail).toContain("lg:grid-cols-[1.4fr_1fr]");
     expect(orderDetail).toContain("OrderStatusForm");
+    expect(orderDetail).toContain("فرعي");
+    expect(orderDetail).toContain("شحن");
+    expect(orderDetail).toContain("خصم");
+    expect(orderDetail).toContain("customerTelHref");
+    expect(orderDetail).toContain("customerWhatsAppHref");
+    expect(customerContact).toContain("tel:");
+    expect(customerContact).toContain("wa.me");
+    expect(orderDetail).toContain("سجل الحالة");
+    expect(orderDetail).toContain("border-s border-mist");
+    expect(orderDetail).not.toContain("بيانات الطلب");
+  });
+
+  it("selects variant_id and maps thumbs in getAdminOrder", () => {
+    expect(ordersLib).toContain("variant_id");
+    expect(ordersLib).toContain("loadOrderItemImageUrls");
+    expect(ordersLib).toContain("PLACEHOLDER_PRODUCT_IMAGE");
   });
 });
 
@@ -53,6 +74,40 @@ describe("order status form", () => {
     expect(statusForm).not.toContain("FormNote");
     expect(statusForm).toContain("useFormToast");
     expect(statusForm).toContain("تم تحديث حالة الطلب");
+  });
+
+  it("restricts options to exported transitions and disables unchanged or terminal saves", () => {
+    expect(statusForm).toContain("allowedOrderStatuses");
+    expect(statusForm).toContain("allowedStatuses");
+    expect(statusForm).not.toContain("Object.keys(statusLabels)");
+    expect(statusForm).toContain("لا يمكن تغيير الحالة");
+    expect(statusForm).toContain("terminal || unchanged");
+    expect(ordersList).toContain("allowedOrderStatuses(order.status)");
+  });
+});
+
+describe("allowedOrderStatuses", () => {
+  it("returns current then unique next statuses", () => {
+    expect(allowedOrderStatuses("pending")).toEqual(["pending", "confirmed", "cancelled", "rejected"]);
+    expect(allowedOrderStatuses("confirmed")).toEqual(["confirmed", "shipped", "cancelled"]);
+    expect(allowedOrderStatuses("shipped")).toEqual(["shipped", "delivered", "cancelled"]);
+    expect(allowedOrderStatuses("delivered")).toEqual(["delivered"]);
+    expect(allowedOrderStatuses("cancelled")).toEqual(["cancelled"]);
+    expect(allowedOrderStatuses("rejected")).toEqual(["rejected"]);
+    expect(validTransitions.pending).toEqual(["confirmed", "cancelled", "rejected"]);
+    expect(validTransitions.delivered).toEqual([]);
+  });
+});
+
+describe("customerWhatsAppHref", () => {
+  it("normalizes Egyptian prefixes and rejects unusable values", () => {
+    expect(customerWhatsAppHref("01012345678")).toBe("https://wa.me/201012345678");
+    expect(customerWhatsAppHref("+20 1012345678")).toBe("https://wa.me/201012345678");
+    expect(customerWhatsAppHref("00201012345678")).toBe("https://wa.me/201012345678");
+    expect(customerWhatsAppHref("201012345678")).toBe("https://wa.me/201012345678");
+    expect(customerWhatsAppHref("not-a-phone")).toBeNull();
+    expect(customerTelHref("01012345678")).toBe("tel:01012345678");
+    expect(customerTelHref("ab")).toBeNull();
   });
 });
 

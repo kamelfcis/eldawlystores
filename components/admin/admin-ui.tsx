@@ -9,19 +9,36 @@ export function adminFilterChipClass(selected: boolean): string {
 export function AdminPage({
   title,
   action,
+  breadcrumb,
+  meta,
+  accentColor,
   children,
 }: {
-  title: string;
+  title: React.ReactNode;
   action?: React.ReactNode;
+  breadcrumb?: React.ReactNode;
+  meta?: React.ReactNode;
+  accentColor?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[16px] font-bold tracking-[0.057em] text-carbon-ink">{title}</h1>
-        {action}
+      <div
+        className={accentColor ? "space-y-6 border-s-[2px] ps-4" : "contents"}
+        style={accentColor ? { borderColor: accentColor } : undefined}
+      >
+        <div className="space-y-2">
+          {breadcrumb}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <h1 className="text-[16px] font-bold tracking-[0.057em] text-carbon-ink">{title}</h1>
+              {meta}
+            </div>
+            {action}
+          </div>
+        </div>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
